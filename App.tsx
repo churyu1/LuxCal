@@ -549,18 +549,18 @@ const App: React.FC = () => {
               </div>
 
               <section className="space-y-4">
-                <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Settings size={12} /> {t.roomGeometry}</div>
+                <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Settings size={12} className="text-slate-400" /> {t.roomGeometry}</div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-4 bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
-                  <div className="space-y-1"><label className="text-[9px] text-slate-500 uppercase">{t.width}</label><input type="number" step="0.1" value={room.width} onChange={e => setRoom({...room, width: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-slate-500 uppercase">{t.length}</label><input type="number" step="0.1" value={room.depth} onChange={e => setRoom({...room, depth: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-slate-500 uppercase">{t.height}</label><input type="number" step="0.1" value={room.height} onChange={e => setRoom({...room, height: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-amber-500 uppercase">{t.slope}</label><input type="number" step="0.1" value={room.chamfer} onChange={e => setRoom({...room, chamfer: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.width}</label><input type="number" step="0.1" value={room.width} onChange={e => setRoom({...room, width: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.length}</label><input type="number" step="0.1" value={room.depth} onChange={e => setRoom({...room, depth: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.height}</label><input type="number" step="0.1" value={room.height} onChange={e => setRoom({...room, height: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-amber-500 font-black uppercase">{t.slope}</label><input type="number" step="0.1" value={room.chamfer} onChange={e => setRoom({...room, chamfer: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs text-white outline-none" /></div>
                 </div>
               </section>
 
               {calcMode === 'FLOOR' && (
                 <section className="space-y-4">
-                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Ruler size={12} /> {t.measurementPlane}</div>
+                  <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Ruler size={12} className="text-slate-400" /> {t.measurementPlane}</div>
                   <div className="bg-slate-700/20 p-4 rounded-2xl border border-slate-700 space-y-4">
                     <div className="flex justify-between items-center">
                       <label className="text-[9px] font-black text-amber-500 uppercase">{t.planeHeight}</label>
@@ -573,18 +573,18 @@ const App: React.FC = () => {
 
               {calcMode === 'BODY' && (
                 <section className="space-y-4">
-                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Box size={12} /> {t.bodyGeometry}</div>
+                  <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Box size={12} className="text-slate-400" /> {t.bodyGeometry}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-4 bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
-                    <div className="space-y-1"><label className="text-[9px] text-slate-500 uppercase">{t.bodyWidth}</label><input type="number" step="0.1" value={room.bodyWidth} onChange={e => setRoom({...room, bodyWidth: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-slate-500 uppercase">{t.bodyLength}</label><input type="number" step="0.1" value={room.bodyLength} onChange={e => setRoom({...room, bodyLength: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-slate-500 uppercase">{t.bodyHeight}</label><input type="number" step="0.1" value={room.bodyHeight} onChange={e => setRoom({...room, bodyHeight: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-amber-500 uppercase font-black">{t.clearance}</label><input type="number" step="0.1" value={room.bodyClearance} onChange={e => setRoom({...room, bodyClearance: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs outline-none font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyWidth}</label><input type="number" step="0.1" value={room.bodyWidth} onChange={e => setRoom({...room, bodyWidth: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyLength}</label><input type="number" step="0.1" value={room.bodyLength} onChange={e => setRoom({...room, bodyLength: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyHeight}</label><input type="number" step="0.1" value={room.bodyHeight} onChange={e => setRoom({...room, bodyHeight: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-amber-500 uppercase font-black">{t.clearance}</label><input type="number" step="0.1" value={room.bodyClearance} onChange={e => setRoom({...room, bodyClearance: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs text-white outline-none font-bold" /></div>
                   </div>
                 </section>
               )}
 
               <section className="space-y-4">
-                <div className="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-700 pb-2">
+                <div className="flex items-center justify-between text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2">
                   <span>{t.lights} ({lights.length} Types / {totalLightPoints} {t.pts})</span>
                   <button onClick={() => setLights([...lights, { id: Math.random().toString(36).substr(2, 9), name: `L`, surface: SurfaceType.CEILING, u: 0.5, v: 0.5, lumens: 4000, color: '#facc15', pitch: 0 }])} className="bg-amber-500 p-1.5 rounded-full hover:bg-amber-400 transition-colors shadow-lg"><Plus size={14} className="text-slate-900" /></button>
                 </div>
@@ -592,26 +592,26 @@ const App: React.FC = () => {
                   <div key={light.id} className="bg-slate-700/40 p-4 rounded-2xl border border-slate-600/50 space-y-4">
                     <div className="flex justify-between items-center">
                       <select value={light.surface} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, surface: e.target.value as SurfaceType } : l))} className="bg-transparent border-none text-[10px] font-black text-slate-200 uppercase outline-none">
-                        {Object.values(SurfaceType).map(s => <option key={s} value={s} className="bg-slate-800">{s}</option>)}
+                        {Object.values(SurfaceType).map(s => <option key={s} value={s} className="bg-slate-800 text-white">{s}</option>)}
                       </select>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setLights([...lights, { ...light, id: Math.random().toString(36).substr(2, 9), name: `${light.name} (Copy)` }])} className="text-slate-500 hover:text-amber-500 transition-colors"><Copy size={12} /></button>
-                        <button onClick={() => setLights(lights.filter(l => l.id !== light.id))} className="text-slate-500 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>
+                        <button onClick={() => setLights([...lights, { ...light, id: Math.random().toString(36).substr(2, 9), name: `${light.name} (Copy)` }])} className="text-slate-400 hover:text-amber-500 transition-colors"><Copy size={12} /></button>
+                        <button onClick={() => setLights(lights.filter(l => l.id !== light.id))} className="text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center"><label className="text-[8px] font-bold text-slate-500 uppercase">U</label><input type="number" step="0.01" value={light.u} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, u: Math.max(0, Math.min(1, Number(e.target.value))) } : l))} className="w-10 bg-slate-900 border border-slate-600 rounded text-right text-[9px] p-0.5 outline-none font-mono text-amber-400" /></div>
+                        <div className="flex justify-between items-center"><label className="text-[8px] font-bold text-slate-300 uppercase">U</label><input type="number" step="0.01" value={light.u} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, u: Math.max(0, Math.min(1, Number(e.target.value))) } : l))} className="w-10 bg-slate-900 border border-slate-600 rounded text-right text-[9px] p-0.5 outline-none font-mono text-amber-400" /></div>
                         <input type="range" min="0" max="1" step="0.01" value={light.u} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, u: Number(e.target.value) } : l))} className="w-full h-1 accent-amber-500 appearance-none bg-slate-600 rounded-full" />
                       </div>
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center"><label className="text-[8px] font-bold text-slate-500 uppercase">V</label><input type="number" step="0.01" value={light.v} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, v: Math.max(0, Math.min(1, Number(e.target.value))) } : l))} className="w-10 bg-slate-900 border border-slate-600 rounded text-right text-[9px] p-0.5 outline-none font-mono text-amber-400" /></div>
+                        <div className="flex justify-between items-center"><label className="text-[8px] font-bold text-slate-300 uppercase">V</label><input type="number" step="0.01" value={light.v} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, v: Math.max(0, Math.min(1, Number(e.target.value))) } : l))} className="w-10 bg-slate-900 border border-slate-600 rounded text-right text-[9px] p-0.5 outline-none font-mono text-amber-400" /></div>
                         <input type="range" min="0" max="1" step="0.01" value={light.v} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, v: Number(e.target.value) } : l))} className="w-full h-1 accent-amber-500 appearance-none bg-slate-600 rounded-full" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1"><label className="text-[8px] text-slate-500 font-bold uppercase">{t.pitch}</label><input type="number" step="0.1" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: Number(e.target.value) } : l))} className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-right text-[10px] outline-none font-mono text-amber-400" /></div>
-                      <div className="space-y-1"><label className="text-[8px] text-slate-500 font-bold uppercase">{t.lumens}</label><input type="number" step="100" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: Number(e.target.value) } : l))} className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-right text-[10px] outline-none font-mono text-amber-400" /></div>
+                      <div className="space-y-1"><label className="text-[8px] text-slate-300 font-bold uppercase">{t.pitch}</label><input type="number" step="0.1" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: Number(e.target.value) } : l))} className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-right text-[10px] outline-none font-mono text-amber-400" /></div>
+                      <div className="space-y-1"><label className="text-[8px] text-slate-300 font-bold uppercase">{t.lumens}</label><input type="number" step="100" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: Number(e.target.value) } : l))} className="w-full bg-slate-900 border border-slate-600 rounded px-1 py-1 text-right text-[10px] outline-none font-mono text-amber-400" /></div>
                     </div>
                   </div>
                 ))}
@@ -625,19 +625,19 @@ const App: React.FC = () => {
                 <div className="p-3 bg-amber-500 rounded-2xl shadow-lg"><Split size={20} className="text-slate-900" /></div>
                 <div>
                   <h2 className="text-xl font-black tracking-tighter">{activeProject.name} {t.analysis}</h2>
-                  <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{t.realtimeVis}</p>
+                  <p className="text-[10px] text-slate-300 uppercase font-black tracking-widest">{t.realtimeVis}</p>
                 </div>
               </div>
               <div className="flex gap-2 items-center">
                 <div className="bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2">
                   <Zap size={12} className="text-amber-400 fill-amber-400" />
                   <div className="flex flex-col leading-none">
-                    <span className="text-[7px] uppercase text-slate-500 font-black">{t.totalLights}</span>
+                    <span className="text-[7px] uppercase text-slate-400 font-black">{t.totalLights}</span>
                     <span className="text-sm font-mono font-black text-amber-400">{totalLightPoints}</span>
                   </div>
                 </div>
                 <div className="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 flex flex-col items-center min-w-[160px]">
-                  <span className="text-[8px] uppercase text-slate-500 font-black mb-1">{t.avgLabel} {calcMode === 'FLOOR' ? t.workPlane : t.bodySurface} ({calcMode === 'FLOOR' ? room.workPlaneHeight : room.bodyClearance + room.bodyHeight}m)</span>
+                  <span className="text-[8px] uppercase text-slate-400 font-black mb-1">{t.avgLabel} {calcMode === 'FLOOR' ? t.workPlane : t.bodySurface} ({calcMode === 'FLOOR' ? room.workPlaneHeight : room.bodyClearance + room.bodyHeight}m)</span>
                   <span className="text-2xl font-mono text-amber-400 font-black">{stats.main.toFixed(0)} <span className="text-[10px] font-normal opacity-50">lx</span></span>
                 </div>
               </div>
@@ -645,13 +645,13 @@ const App: React.FC = () => {
 
             <div className="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-4">
               <div ref={planContainerRef} className="bg-slate-950 rounded-[2rem] border-2 border-slate-800 shadow-inner relative flex flex-col overflow-hidden">
-                <div className="absolute top-6 left-8 flex items-center gap-2 z-10"><div className="w-1.5 h-4 bg-amber-500 rounded-full"></div><span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{calcMode === 'FLOOR' ? t.floorTopView : t.bodyTopView}</span></div>
+                <div className="absolute top-6 left-8 flex items-center gap-2 z-10"><div className="w-1.5 h-4 bg-amber-500 rounded-full"></div><span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{calcMode === 'FLOOR' ? t.floorTopView : t.bodyTopView}</span></div>
                 <div className="flex-1 relative flex items-center justify-center">
                   <svg ref={planSvgRef} className="w-full h-full pointer-events-auto" />
                 </div>
               </div>
               <div ref={sectionContainerRef} className="bg-slate-950 rounded-[2rem] border-2 border-slate-800 shadow-inner relative flex flex-col overflow-hidden">
-                <div className="absolute top-6 left-8 flex items-center gap-2 z-10"><div className="w-1.5 h-4 bg-blue-500 rounded-full"></div><span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.sectionView}</span></div>
+                <div className="absolute top-6 left-8 flex items-center gap-2 z-10"><div className="w-1.5 h-4 bg-blue-500 rounded-full"></div><span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{t.sectionView}</span></div>
                 <div className="flex-1 relative flex items-center justify-center">
                   <svg ref={sectionSvgRef} className="w-full h-full pointer-events-auto" />
                 </div>
@@ -661,7 +661,7 @@ const App: React.FC = () => {
             {hoverInfo && (
               <div className="fixed pointer-events-none z-[100] transform -translate-x-1/2 -translate-y-[calc(100%+12px)] transition-all duration-75" style={{ left: hoverInfo.x, top: hoverInfo.y }}>
                 <div className="bg-slate-900/95 backdrop-blur-md px-4 py-3 rounded-2xl border border-amber-500/50 shadow-2xl flex flex-col items-center">
-                  <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{hoverInfo.label}</div>
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{hoverInfo.label}</div>
                   <div className="text-2xl font-black font-mono text-amber-400">{hoverInfo.lux.toFixed(0)} <span className="text-xs font-normal opacity-60">lx</span></div>
                   <div className="w-3 h-3 bg-slate-900 border-r border-b border-amber-500/50 rotate-45 -mb-4 mt-2"></div>
                 </div>
@@ -671,7 +671,7 @@ const App: React.FC = () => {
             {showGuide && (
               <div className="absolute bottom-8 right-8 w-[300px] z-30">
                 <div className="bg-slate-900/90 backdrop-blur-xl px-6 py-4 rounded-3xl border border-slate-700 shadow-2xl space-y-2">
-                  <div className="flex justify-between text-[9px] font-black text-slate-500 uppercase tracking-widest"><span>0 lx</span><span>{t.peak}: {stats.peak.toFixed(0)} lx</span></div>
+                  <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest"><span>0 lx</span><span>{t.peak}: {stats.peak.toFixed(0)} lx</span></div>
                   <div className="w-full h-2 rounded-full bg-[linear-gradient(to_right,#0f172a,#991b1b,#ea580c,#facc15,#ffffff)] border border-slate-800"></div>
                   <button onClick={() => setShowGuide(false)} className="absolute -top-2 -right-2 bg-slate-800 p-1 rounded-full border border-slate-700 hover:text-white transition-all"><X size={10} /></button>
                 </div>
