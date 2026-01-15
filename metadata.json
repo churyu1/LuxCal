@@ -1,0 +1,5 @@
+{
+  "name": "LuxCalc Pro - Advanced Illuminance Simulator (Copy 2)",
+  "description": "An advanced illuminance calculation tool specifically designed for rooms with 45-degree sloped corner surfaces. Features real-time heatmap visualization and AI-powered lighting optimization.",
+  "requestFramePermissions": []
+}
