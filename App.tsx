@@ -22,7 +22,8 @@ import {
   BookOpen,
   CheckCircle2,
   ChevronRight,
-  Languages
+  Languages,
+  Activity
 } from 'lucide-react';
 import { RoomConfig, LightSource, SurfaceType, CalculationResult } from './types';
 
@@ -78,6 +79,8 @@ const translations = {
     realtimeVis: "リアルタイム可視化",
     totalLights: "照明総数",
     avgLabel: "平均照度",
+    topLabel: "上面平均",
+    sideLabel: "側面平均",
     workPlane: "作業面",
     bodySurface: "ボディ表面",
     peak: "最大",
@@ -87,12 +90,17 @@ const translations = {
     doubleClick: "ダブルクリックで名前変更",
     deleteProj: "プロジェクト削除",
     refTitle: "LuxCalc Pro 技術リファレンス",
-    refDesc: "建築照明設計における「点照度計算法」に基づき、リアルタイムの照度シミュレーションを行います。",
-    refAlgoTitle: "基本アルゴリズム",
-    refAlgoDesc: "本アプリは「逆二乗の法則」および「余弦の法則」を採用しています。",
-    refGeoTitle: "幾何学的処理",
-    refGeoDesc: "特殊な室内形状（45度傾斜面）に対応するため、座標変換と法線ベクトルの動的算出を行っています。",
-    refSlopeDesc: "天井と壁の接続部に45度の面を定義。光源配置時にこの傾斜角度を考慮した照射方向が計算に含まれます。"
+    refDesc: "建築照明設計における「点照度計算法」に基づき、リアルタイムの照度シミュレーションを行います。本アプリは単なる距離減衰だけでなく、器具の向きと受照面の角度を厳密に計算します。",
+    refAlgoTitle: "計算アルゴリズム",
+    refAlgoDesc: "本アプリは「逆二乗の法則」に加え、「ランベルトの余弦則」を放射・入射の両側に適用した高度な点照度計算を行っています。",
+    refLambertTitle: "1. 指向性配光 (ランベルト放射)",
+    refLambertDesc: "光源は全方向へ均等に光を出す点光源ではなく、設置された面の法線方向に最大の強さを持ち、角度に従って減衰する「指向性光源」として定義されています。放射光度は cosθ（放射角の余弦）に比例します。",
+    refIncidenceTitle: "2. 受照面の入射角補正",
+    refIncidenceDesc: "光が受照面に斜めに入るほど、単位面積あたりの光束は減少します。これも cosφ（入射角の余弦）を用いて計算されます。",
+    refFormula: "E = (Φ / π) * cosθ * cosφ / d²",
+    refGeoTitle: "幾何学的処理と45度傾斜面",
+    refGeoDesc: "特殊な室内形状に対応するため、全ての光源と計算点において動的な法線ベクトル計算を行っています。",
+    refSlopeDesc: "天井と壁の接続部の45度面（斜め面）に配置された照明は、部屋の内側（45度斜め下）を向くように法線が自動設定され、配光の中心がその方向へ向けられます。"
   },
   en: {
     appTitle: "LuxCalc Pro",
@@ -121,6 +129,8 @@ const translations = {
     realtimeVis: "Real-time Visualization",
     totalLights: "Total Lights",
     avgLabel: "AVG.",
+    topLabel: "Top Avg",
+    sideLabel: "Side Avg",
     workPlane: "WORK PLANE",
     bodySurface: "BODY SURFACE",
     peak: "Peak",
@@ -130,12 +140,17 @@ const translations = {
     doubleClick: "Double click to rename",
     deleteProj: "Delete Project",
     refTitle: "Technical Reference",
-    refDesc: "LuxCalc Pro performs real-time illuminance simulation based on the Point-by-Point Method used in architectural lighting design.",
+    refDesc: "LuxCalc Pro performs real-time illuminance simulation based on the Point-by-Point Method. It goes beyond simple distance decay by strictly calculating source orientation and receiver incidence angles.",
     refAlgoTitle: "Core Algorithm",
-    refAlgoDesc: "This application employs the Inverse Square Law and Cosine Law.",
-    refGeoTitle: "Geometric Processing",
-    refGeoDesc: "To handle unique room shapes (45-degree chamfers), dynamic coordinate transformations and normal vector calculations are performed.",
-    refSlopeDesc: "A 45-degree surface is defined at the ceiling-wall intersection. The tilt angle is automatically considered when calculating light distribution."
+    refAlgoDesc: "This app employs the Inverse Square Law combined with Lambert's Cosine Law for both emission and incidence.",
+    refLambertTitle: "1. Directional Distribution (Lambertian)",
+    refLambertDesc: "Light sources are defined as directional (Lambertian) sources rather than isotropic points. Maximum intensity is aligned with the surface normal, decaying by cosθ as the angle increases.",
+    refIncidenceTitle: "2. Incidence Angle Correction",
+    refIncidenceDesc: "Illuminance decreases as light hits the surface at shallower angles. This is corrected using cosφ (angle of incidence).",
+    refFormula: "E = (Φ / π) * cosθ * cosφ / d²",
+    refGeoTitle: "Geometric Processing & 45° Chamfers",
+    refGeoDesc: "Dynamic normal vector calculations are performed for all light sources and calculation points to handle complex geometries.",
+    refSlopeDesc: "Lights placed on the 45° sloped surfaces are automatically oriented towards the interior (45° downwards), aligning the distribution peak accordingly."
   }
 };
 
@@ -156,63 +171,86 @@ interface HoverInfo {
 
 const TechnicalReference: React.FC<{ t: any }> = ({ t }) => (
   <div className="flex-1 overflow-y-auto p-8 bg-slate-900/50">
-    <div className="max-w-4xl mx-auto space-y-12">
+    <div className="max-w-4xl mx-auto space-y-12 pb-20">
       <header className="space-y-4">
         <div className="flex items-center gap-3 text-amber-500">
           <BookOpen size={32} />
           <h1 className="text-4xl font-black tracking-tight">{t.refTitle}</h1>
         </div>
-        <p className="text-slate-400 text-lg leading-relaxed">
+        <p className="text-slate-400 text-lg leading-relaxed border-l-4 border-amber-500/30 pl-6">
           {t.refDesc}
         </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <section className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 space-y-4">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-            <CheckCircle2 className="text-amber-500" size={20} />
+      <div className="grid grid-cols-1 gap-8">
+        {/* Core Algorithm Section */}
+        <section className="bg-slate-800/50 p-8 rounded-3xl border border-slate-700 space-y-6">
+          <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
+            <Activity className="text-amber-500" size={24} />
             {t.refAlgoTitle}
           </h2>
-          <div className="space-y-4 text-sm text-slate-300">
-            <p>{t.refAlgoDesc}</p>
-            <div className="bg-slate-950 p-4 rounded-xl font-mono text-amber-400 text-center text-lg italic">
-              E = (I × cos θ) / d²
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <h3 className="text-amber-400 font-bold flex items-center gap-2">
+                <ChevronRight size={16} /> {t.refLambertTitle}
+              </h3>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                {t.refLambertDesc}
+              </p>
+              
+              <h3 className="text-amber-400 font-bold flex items-center gap-2">
+                <ChevronRight size={16} /> {t.refIncidenceTitle}
+              </h3>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                {t.refIncidenceDesc}
+              </p>
             </div>
-            <ul className="space-y-2">
-              <li className="flex gap-2">
-                <span className="font-bold text-slate-100">E:</span> 
-                <span>Lux</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="font-bold text-slate-100">I:</span> 
-                <span>Candela</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="font-bold text-slate-100">d:</span> 
-                <span>Distance (m)</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="font-bold text-slate-100">θ:</span> 
-                <span>Incidence Angle</span>
-              </li>
-            </ul>
+
+            <div className="bg-slate-950 p-8 rounded-2xl flex flex-col items-center justify-center border border-slate-800 shadow-inner space-y-4">
+              <div className="text-3xl font-mono text-amber-400 text-center italic drop-shadow-md">
+                {t.refFormula}
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[11px] font-mono text-slate-400">
+                <div className="flex gap-2"><span className="text-white font-bold">E:</span> 照度 [Lux]</div>
+                <div className="flex gap-2"><span className="text-white font-bold">Φ:</span> 全光束 [Lumen]</div>
+                <div className="flex gap-2"><span className="text-white font-bold">θ:</span> 放射角</div>
+                <div className="flex gap-2"><span className="text-white font-bold">φ:</span> 入射角</div>
+                <div className="flex gap-2"><span className="text-white font-bold">d:</span> 距離 [m]</div>
+                <div className="flex gap-2"><span className="text-white font-bold">π:</span> 半球放射定数</div>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="bg-slate-800/50 p-6 rounded-3xl border border-slate-700 space-y-4">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-            <CheckCircle2 className="text-amber-500" size={20} />
+        {/* Geometry & Slope Section */}
+        <section className="bg-slate-800/50 p-8 rounded-3xl border border-slate-700 space-y-6">
+          <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
+            <Layout className="text-blue-400" size={24} />
             {t.refGeoTitle}
           </h2>
-          <div className="space-y-4 text-sm text-slate-300">
-            <p>{t.refGeoDesc}</p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-amber-500/80 uppercase tracking-wider">
-                <ChevronRight size={12} /> {t.slope}
-              </div>
-              <p className="pl-4 border-l border-slate-700 text-xs">
+          <div className="space-y-6">
+            <p className="text-slate-300">{t.refGeoDesc}</p>
+            
+            <div className="bg-slate-950/50 p-6 rounded-2xl border border-slate-700/50">
+              <h4 className="text-blue-400 text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                <Activity size={14} /> 45° Slope Calculation
+              </h4>
+              <p className="text-sm text-slate-400 leading-relaxed mb-4">
                 {t.refSlopeDesc}
               </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {[
+                  { label: "CEILING", dir: "(0, -1, 0)" },
+                  { label: "SLOPE EAST", dir: "(-0.7, -0.7, 0)" },
+                  { label: "WALL EAST", dir: "(-1, 0, 0)" }
+                ].map(item => (
+                  <div key={item.label} className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-center">
+                    <div className="text-[10px] text-slate-500 font-bold mb-1">{item.label}</div>
+                    <div className="text-xs font-mono text-blue-300">{item.dir}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -308,9 +346,23 @@ const App: React.FC = () => {
     setDraggedIndex(null);
   };
 
+  const getLightNormal = (surface: SurfaceType) => {
+    const invSqrt2 = 1 / Math.sqrt(2);
+    switch (surface) {
+      case SurfaceType.CEILING: return { nx: 0, ny: -1, nz: 0 };
+      case SurfaceType.WALL_EAST: return { nx: -1, ny: 0, nz: 0 };
+      case SurfaceType.WALL_WEST: return { nx: 1, ny: 0, nz: 0 };
+      case SurfaceType.SLOPE_EAST: return { nx: -invSqrt2, ny: -invSqrt2, nz: 0 };
+      case SurfaceType.SLOPE_WEST: return { nx: invSqrt2, ny: -invSqrt2, nz: 0 };
+      default: return { nx: 0, ny: -1, nz: 0 };
+    }
+  };
+
   const getExpandedLights = (light: LightSource, r: RoomConfig) => {
-    const instances: {x: number, y: number, z: number}[] = [];
+    const instances: {x: number, y: number, z: number, nx: number, ny: number, nz: number}[] = [];
     const { width: W, depth: D, height: H, chamfer: C } = r;
+    const normal = getLightNormal(light.surface);
+
     const getBasePos = (u: number, v: number) => {
       let x = 0, y = 0, z = 0;
       z = v * D;
@@ -321,7 +373,7 @@ const App: React.FC = () => {
         case SurfaceType.SLOPE_EAST: x = W - (u * C); y = (H - C) + (u * C); break;
         case SurfaceType.SLOPE_WEST: x = u * C; y = (H - C) + (u * C); break;
       }
-      return { x, y, z };
+      return { x, y, z, ...normal };
     };
     if (light.pitch <= 0) { instances.push(getBasePos(light.u, light.v)); return instances; }
     let startZ = light.v * D;
@@ -367,16 +419,29 @@ const App: React.FC = () => {
       let totalLux = 0;
       lights.forEach(light => {
         getExpandedLights(light, room).forEach(inst => {
-          const dx = inst.x - p.x; const dy = inst.y - p.y; const dz = inst.z - p.z;
-          const distSq = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(distSq);
+          const dx = p.x - inst.x; 
+          const dy = p.y - inst.y; 
+          const dz = p.z - inst.z;
+          const distSq = dx * dx + dy * dy + dz * dz; 
+          const dist = Math.sqrt(distSq);
           if (dist < 0.05) return;
-          const lx = dx / dist; const ly = dy / dist; const lz = dz / dist;
-          const cosTheta = Math.max(0, lx * p.nx + ly * p.ny + lz * p.nz);
-          const intensity = light.lumens / (4 * Math.PI);
-          totalLux += (intensity * cosTheta) / distSq;
+
+          const l_to_p_x = dx / dist;
+          const l_to_p_y = dy / dist;
+          const l_to_p_z = dz / dist;
+
+          const p_to_l_x = -l_to_p_x;
+          const p_to_l_y = -l_to_p_y;
+          const p_to_l_z = -l_to_p_z;
+
+          const cosPhi = Math.max(0, p_to_l_x * p.nx + p_to_l_y * p.ny + p_to_l_z * p.nz);
+          const cosTheta = Math.max(0, l_to_p_x * inst.nx + l_to_p_y * inst.ny + l_to_p_z * inst.nz);
+
+          const intensity0 = light.lumens / Math.PI;
+          totalLux += (intensity0 * cosTheta * cosPhi) / distSq;
         });
       });
-      grid.push({ ...p, lux: totalLux * 10, surfaceType: p.type });
+      grid.push({ ...p, lux: totalLux, surfaceType: p.type });
     });
     return grid;
   }, [room, lights, calcMode, activeProjectId]);
@@ -392,7 +457,7 @@ const App: React.FC = () => {
 
   const colorScale = useMemo(() => 
     d3.scaleLinear<string>()
-      .domain(COLOR_STOPS.map(s => s.pos * Math.max(10, stats.peak)))
+      .domain(COLOR_STOPS.map(s => s.pos * Math.max(100, stats.peak)))
       .range(COLOR_STOPS.map(s => s.color))
       .interpolate(d3.interpolateRgb)
   , [stats.peak]);
@@ -478,6 +543,14 @@ const App: React.FC = () => {
     lights.forEach(light => {
       getExpandedLights(light, room).forEach(pos => {
         g.append("circle").attr("cx", xScale(pos.x)).attr("cy", yScale(pos.y)).attr("r", 4).attr("fill", light.color).attr("stroke", "#fff").attr("stroke-width", 1.5);
+        g.append("line")
+          .attr("x1", xScale(pos.x))
+          .attr("y1", yScale(pos.y))
+          .attr("x2", xScale(pos.x + pos.nx * 0.3))
+          .attr("y2", yScale(pos.y + pos.ny * 0.3))
+          .attr("stroke", light.color)
+          .attr("stroke-width", 1)
+          .attr("opacity", 0.6);
       });
     });
   }, [results, room, lights, calcMode, sectionDims, activeProjectId, colorScale]);
@@ -510,7 +583,6 @@ const App: React.FC = () => {
           <button onClick={() => { const id = `proj-${Date.now()}`; setProjects([...projects, { id, name: `Project ${projects.length+1}`, room: {...DEFAULT_ROOM}, lights: [], calcMode: 'FLOOR' }]); setActiveProjectId(id); }} className="flex items-center justify-center h-8 w-8 mb-1 rounded-lg bg-slate-800/50 text-slate-400 hover:bg-amber-500 hover:text-white transition-all shadow-sm shrink-0"><Plus size={16} /></button>
         </div>
         <div className="flex items-center gap-2 px-4 pb-2">
-          {/* Language Selector */}
           <div className="relative group/lang">
             <select 
               value={language} 
@@ -522,7 +594,6 @@ const App: React.FC = () => {
             </select>
             <Languages size={10} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500" />
           </div>
-
           <button onClick={() => { 
             const data = JSON.stringify(projects, null, 2); 
             const blob = new Blob([data], { type: 'application/json' }); 
@@ -530,9 +601,7 @@ const App: React.FC = () => {
             const a = document.createElement('a'); 
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
-            a.href = url; 
-            a.download = `LuxCal_${dateStr}.json`; 
-            a.click(); 
+            a.href = url; a.download = `LuxCal_${dateStr}.json`; a.click(); 
           }} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all text-[10px] font-black uppercase tracking-tighter border border-slate-700"><Download size={12} /> <span className="hidden sm:inline">{t.export}</span></button>
           <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition-all text-[10px] font-black uppercase tracking-tighter border border-slate-700"><Upload size={12} /> <span className="hidden sm:inline">{t.import}</span></button>
           <input type="file" ref={fileInputRef} onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { try { const d = JSON.parse(ev.target?.result as string); setProjects(d); if (d.length > 0) setActiveProjectId(d[0].id); } catch(e) { alert('Invalid file'); } }; reader.readAsText(file); }} accept=".json" className="hidden" />
@@ -547,7 +616,6 @@ const App: React.FC = () => {
                 <button onClick={() => setCalcMode('FLOOR')} className={`flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${calcMode === 'FLOOR' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Layout size={14} /> {t.floorPlan}</button>
                 <button onClick={() => setCalcMode('BODY')} className={`flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${calcMode === 'BODY' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Box size={14} /> {t.bodyInsp}</button>
               </div>
-
               <section className="space-y-4">
                 <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Settings size={12} className="text-slate-400" /> {t.roomGeometry}</div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-4 bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
@@ -557,7 +625,6 @@ const App: React.FC = () => {
                   <div className="space-y-1"><label className="text-[9px] text-amber-500 font-black uppercase">{t.slope}</label><input type="number" step="0.1" value={room.chamfer} onChange={e => setRoom({...room, chamfer: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 text-xs text-white outline-none" /></div>
                 </div>
               </section>
-
               {calcMode === 'FLOOR' && (
                 <section className="space-y-4">
                   <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Ruler size={12} className="text-slate-400" /> {t.measurementPlane}</div>
@@ -570,7 +637,6 @@ const App: React.FC = () => {
                   </div>
                 </section>
               )}
-
               {calcMode === 'BODY' && (
                 <section className="space-y-4">
                   <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Box size={12} className="text-slate-400" /> {t.bodyGeometry}</div>
@@ -582,7 +648,6 @@ const App: React.FC = () => {
                   </div>
                 </section>
               )}
-
               <section className="space-y-4">
                 <div className="flex items-center justify-between text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2">
                   <span>{t.lights} ({lights.length} Types / {totalLightPoints} {t.pts})</span>
@@ -618,9 +683,8 @@ const App: React.FC = () => {
               </section>
             </div>
           </aside>
-
           <main className="flex-1 flex flex-col p-4 relative bg-slate-900 overflow-hidden">
-            <header className="flex justify-between items-end mb-4 px-4">
+            <header className="flex flex-wrap justify-between items-end mb-4 px-4 gap-4">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-amber-500 rounded-2xl shadow-lg"><Split size={20} className="text-slate-900" /></div>
                 <div>
@@ -628,7 +692,19 @@ const App: React.FC = () => {
                   <p className="text-[10px] text-slate-300 uppercase font-black tracking-widest">{t.realtimeVis}</p>
                 </div>
               </div>
-              <div className="flex gap-2 items-center">
+              <div className="flex flex-wrap gap-2 items-center">
+                {calcMode === 'BODY' && (
+                  <div className="flex gap-2 mr-2 border-r border-slate-800 pr-4">
+                    <div className="bg-slate-800/40 px-3 py-1.5 rounded-xl border border-slate-700/50 flex flex-col items-end min-w-[100px]">
+                      <span className="text-[7px] uppercase text-slate-500 font-black tracking-tighter">{t.topLabel}</span>
+                      <span className="text-xs font-mono text-slate-300 font-bold">{stats.top.toFixed(0)} <span className="text-[8px] font-normal opacity-50">lx</span></span>
+                    </div>
+                    <div className="bg-slate-800/40 px-3 py-1.5 rounded-xl border border-slate-700/50 flex flex-col items-end min-w-[100px]">
+                      <span className="text-[7px] uppercase text-slate-500 font-black tracking-tighter">{t.sideLabel}</span>
+                      <span className="text-xs font-mono text-slate-300 font-bold">{stats.side.toFixed(0)} <span className="text-[8px] font-normal opacity-50">lx</span></span>
+                    </div>
+                  </div>
+                )}
                 <div className="bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2">
                   <Zap size={12} className="text-amber-400 fill-amber-400" />
                   <div className="flex flex-col leading-none">
@@ -636,28 +712,22 @@ const App: React.FC = () => {
                     <span className="text-sm font-mono font-black text-amber-400">{totalLightPoints}</span>
                   </div>
                 </div>
-                <div className="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 flex flex-col items-center min-w-[160px]">
-                  <span className="text-[8px] uppercase text-slate-400 font-black mb-1">{t.avgLabel} {calcMode === 'FLOOR' ? t.workPlane : t.bodySurface} ({calcMode === 'FLOOR' ? room.workPlaneHeight : room.bodyClearance + room.bodyHeight}m)</span>
-                  <span className="text-2xl font-mono text-amber-400 font-black">{stats.main.toFixed(0)} <span className="text-[10px] font-normal opacity-50">lx</span></span>
+                <div className="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 flex flex-col items-center min-w-[160px] shadow-lg">
+                  <span className="text-[8px] uppercase text-slate-400 font-black mb-1">{t.avgLabel} {calcMode === 'FLOOR' ? t.workPlane : t.bodySurface}</span>
+                  <span className="text-2xl font-mono text-amber-400 font-black tracking-tight">{stats.main.toFixed(0)} <span className="text-[10px] font-normal opacity-50">lx</span></span>
                 </div>
               </div>
             </header>
-
             <div className="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-4">
               <div ref={planContainerRef} className="bg-slate-950 rounded-[2rem] border-2 border-slate-800 shadow-inner relative flex flex-col overflow-hidden">
                 <div className="absolute top-6 left-8 flex items-center gap-2 z-10"><div className="w-1.5 h-4 bg-amber-500 rounded-full"></div><span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{calcMode === 'FLOOR' ? t.floorTopView : t.bodyTopView}</span></div>
-                <div className="flex-1 relative flex items-center justify-center">
-                  <svg ref={planSvgRef} className="w-full h-full pointer-events-auto" />
-                </div>
+                <div className="flex-1 relative flex items-center justify-center"><svg ref={planSvgRef} className="w-full h-full pointer-events-auto" /></div>
               </div>
               <div ref={sectionContainerRef} className="bg-slate-950 rounded-[2rem] border-2 border-slate-800 shadow-inner relative flex flex-col overflow-hidden">
                 <div className="absolute top-6 left-8 flex items-center gap-2 z-10"><div className="w-1.5 h-4 bg-blue-500 rounded-full"></div><span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{t.sectionView}</span></div>
-                <div className="flex-1 relative flex items-center justify-center">
-                  <svg ref={sectionSvgRef} className="w-full h-full pointer-events-auto" />
-                </div>
+                <div className="flex-1 relative flex items-center justify-center"><svg ref={sectionSvgRef} className="w-full h-full pointer-events-auto" /></div>
               </div>
             </div>
-
             {hoverInfo && (
               <div className="fixed pointer-events-none z-[100] transform -translate-x-1/2 -translate-y-[calc(100%+12px)] transition-all duration-75" style={{ left: hoverInfo.x, top: hoverInfo.y }}>
                 <div className="bg-slate-900/95 backdrop-blur-md px-4 py-3 rounded-2xl border border-amber-500/50 shadow-2xl flex flex-col items-center">
@@ -667,7 +737,6 @@ const App: React.FC = () => {
                 </div>
               </div>
             )}
-
             {showGuide && (
               <div className="absolute bottom-8 right-8 w-[300px] z-30">
                 <div className="bg-slate-900/90 backdrop-blur-xl px-6 py-4 rounded-3xl border border-slate-700 shadow-2xl space-y-2">
