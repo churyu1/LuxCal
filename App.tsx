@@ -33,7 +33,7 @@ const DEFAULT_ROOM: RoomConfig = {
   width: 6,
   depth: 8,
   height: 3.5,
-  chamfer: 0.5,
+  chamfer: 1.5,
   workPlaneHeight: 0.8,
   bodyWidth: 1.8,
   bodyHeight: 1.5,
@@ -636,10 +636,10 @@ const App: React.FC = () => {
               <section className="space-y-4">
                 <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Settings size={12} className="text-slate-400" /> {t.roomGeometry}</div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-4 bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
-                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.width}</label><input type="number" step="0.1" value={room.width} onChange={e => setRoom({...room, width: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.length}</label><input type="number" step="0.1" value={room.depth} onChange={e => setRoom({...room, depth: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.height}</label><input type="number" step="0.1" value={room.height} onChange={e => setRoom({...room, height: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-amber-500 font-black uppercase">{t.slope}</label><input type="number" step="0.1" value={room.chamfer} onChange={e => setRoom({...room, chamfer: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.width}</label><input type="number" step="0.1" min="0" value={room.width} onChange={e => setRoom({...room, width: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.length}</label><input type="number" step="0.1" min="0" value={room.depth} onChange={e => setRoom({...room, depth: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.height}</label><input type="number" step="0.1" min="0" value={room.height} onChange={e => setRoom({...room, height: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-amber-500 font-black uppercase">{t.slope}</label><input type="number" step="0.1" min="0" value={room.chamfer} onChange={e => setRoom({...room, chamfer: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
                 </div>
               </section>
               {calcMode === 'FLOOR' && (
@@ -648,7 +648,7 @@ const App: React.FC = () => {
                   <div className="bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
                     <div className="space-y-1">
                       <label className="text-[9px] font-black text-amber-500 uppercase">{t.planeHeight}</label>
-                      <input type="number" step="0.01" value={room.workPlaneHeight} onChange={e => setRoom({...room, workPlaneHeight: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                      <input type="number" step="0.01" min="0" value={room.workPlaneHeight} onChange={e => setRoom({...room, workPlaneHeight: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
                     </div>
                   </div>
                 </section>
@@ -657,10 +657,10 @@ const App: React.FC = () => {
                 <section className="space-y-4">
                   <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Box size={12} className="text-slate-400" /> {t.bodyGeometry}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-4 bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
-                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyWidth}</label><input type="number" step="0.1" value={room.bodyWidth} onChange={e => setRoom({...room, bodyWidth: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyLength}</label><input type="number" step="0.1" value={room.bodyLength} onChange={e => setRoom({...room, bodyLength: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyHeight}</label><input type="number" step="0.1" value={room.bodyHeight} onChange={e => setRoom({...room, bodyHeight: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-amber-500 uppercase font-black">{t.clearance}</label><input type="number" step="0.1" value={room.bodyClearance} onChange={e => setRoom({...room, bodyClearance: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyWidth}</label><input type="number" step="0.1" min="0" value={room.bodyWidth} onChange={e => setRoom({...room, bodyWidth: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyLength}</label><input type="number" step="0.1" min="0" value={room.bodyLength} onChange={e => setRoom({...room, bodyLength: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyHeight}</label><input type="number" step="0.1" min="0" value={room.bodyHeight} onChange={e => setRoom({...room, bodyHeight: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-amber-500 uppercase font-black">{t.clearance}</label><input type="number" step="0.1" min="0" value={room.bodyClearance} onChange={e => setRoom({...room, bodyClearance: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none font-bold" /></div>
                   </div>
                 </section>
               )}
@@ -683,16 +683,16 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-300 uppercase">{t.uLabel}</label>
-                        <input type="number" step="0.01" value={light.u} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, u: Math.max(0, Math.min(1, Number(e.target.value))) } : l))} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                        <input type="number" step="0.01" min="0" value={light.u} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, u: Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-300 uppercase">{t.vLabel}</label>
-                        <input type="number" step="0.01" value={light.v} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, v: Math.max(0, Math.min(1, Number(e.target.value))) } : l))} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                        <input type="number" step="0.01" min="0" value={light.v} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, v: Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-                      <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.pitch}</label><input type="number" step="0.1" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: Number(e.target.value) } : l))} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                      <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.lumens}</label><input type="number" step="100" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: Number(e.target.value) } : l))} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                      <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.pitch}</label><input type="number" step="0.1" min="0" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                      <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.lumens}</label><input type="number" step="100" min="0" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
                     </div>
                   </div>
                 ))}
