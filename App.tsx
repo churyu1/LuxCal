@@ -35,6 +35,7 @@ const DEFAULT_ROOM: RoomConfig = {
   height: 3.5,
   chamfer: 1.5,
   workPlaneHeight: 0.8,
+  maintenanceFactor: 0.8, // Default maintenance factor
   bodyWidth: 1.8,
   bodyHeight: 1.5,
   bodyLength: 4.8,
@@ -58,6 +59,8 @@ const translations = {
     import: "インポート",
     floorPlan: "フロアプラン",
     bodyInsp: "ボディ検査",
+    maintenanceFactor: "保守率",
+    maintenanceFactorNote: "(目安: クリーンな環境 0.8 / 通常 0.7 / 汚れやすい環境 0.6)",
     roomGeometry: "部屋の形状",
     width: "幅 (m)",
     length: "奥行き (m)",
@@ -117,6 +120,8 @@ const translations = {
     import: "Import",
     floorPlan: "Floor Plan",
     bodyInsp: "Body Insp.",
+    maintenanceFactor: "Maintenance Factor",
+    maintenanceFactorNote: "(Guideline: Clean Env. 0.8 / Normal 0.7 / Dirty Env. 0.6)",
     roomGeometry: "Room Geometry",
     width: "Width (m)",
     length: "Length (m)",
@@ -300,9 +305,10 @@ const App: React.FC = () => {
     projects.find(p => p.id === activeProjectId) || projects[0]
   , [projects, activeProjectId]);
 
-  const { room, lights, calcMode } = activeProject;
+  const { room, lights, calcMode } = activeProject || { room: DEFAULT_ROOM, lights: [], calcMode: 'FLOOR' };
 
   const updateActiveProject = (updates: Partial<Project>) => {
+    if (!activeProject) return;
     setProjects(prev => prev.map(p => p.id === activeProjectId ? { ...p, ...updates } : p));
   };
 
@@ -380,22 +386,22 @@ const App: React.FC = () => {
     const { width: W, depth: D, height: H, chamfer: C } = r;
     const normal = getLightNormal(light.surface);
 
-    const getBasePos = (u: number, v: number) => {
+    const getBasePos = (u: number | '', v: number | '') => {
       let x = 0, y = 0, z = 0;
-      z = v * D;
+      z = (v || 0) * (D || 0);
       switch (light.surface) {
-        case SurfaceType.CEILING: x = u * (W - 2 * C) + C; y = H; break;
-        case SurfaceType.WALL_EAST: x = W; y = u * (H - C); break;
-        case SurfaceType.WALL_WEST: x = 0; y = u * (H - C); break;
-        case SurfaceType.SLOPE_EAST: x = W - (u * C); y = (H - C) + (u * C); break;
-        case SurfaceType.SLOPE_WEST: x = u * C; y = (H - C) + (u * C); break;
+        case SurfaceType.CEILING: x = (u || 0) * ((W || 0) - 2 * (C || 0)) + (C || 0); y = (H || 0); break;
+        case SurfaceType.WALL_EAST: x = (W || 0); y = (u || 0) * ((H || 0) - (C || 0)); break;
+        case SurfaceType.WALL_WEST: x = 0; y = (u || 0) * ((H || 0) - (C || 0)); break;
+        case SurfaceType.SLOPE_EAST: x = (W || 0) - ((u || 0) * (C || 0)); y = ((H || 0) - (C || 0)) + ((u || 0) * (C || 0)); break;
+        case SurfaceType.SLOPE_WEST: x = (u || 0) * (C || 0); y = ((H || 0) - (C || 0)) + ((u || 0) * (C || 0)); break;
       }
       return { x, y, z, ...normal };
     };
-    if (light.pitch <= 0) { instances.push(getBasePos(light.u, light.v)); return instances; }
-    let startZ = light.v * D;
-    for (let z = startZ; z <= D + 0.001; z += light.pitch) instances.push(getBasePos(light.u, z / D));
-    for (let z = startZ - light.pitch; z >= -0.001; z -= light.pitch) instances.push(getBasePos(light.u, z / D));
+    if ((light.pitch || 0) <= 0) { instances.push(getBasePos(light.u, light.v)); return instances; }
+    let startZ = (light.v || 0) * (D || 0);
+    for (let z = startZ; z <= (D || 0) + 0.001; z += (light.pitch || 1)) instances.push(getBasePos(light.u, z / (D || 1)));
+    for (let z = startZ - (light.pitch || 1); z >= -0.001; z -= (light.pitch || 1)) instances.push(getBasePos(light.u, z / (D || 1)));
     return instances;
   };
 
@@ -407,27 +413,27 @@ const App: React.FC = () => {
     const points: { x: number, y: number, z: number, nx: number, ny: number, nz: number, type: any }[] = [];
     
     if (calcMode === 'FLOOR') {
-      const stepX = room.width / GRID_RESOLUTION;
-      const stepZ = room.depth / GRID_RESOLUTION;
+      const stepX = (room.width || 0) / GRID_RESOLUTION;
+      const stepZ = (room.depth || 0) / GRID_RESOLUTION;
       for (let i = 0; i < GRID_RESOLUTION; i++) {
         for (let j = 0; j < GRID_RESOLUTION; j++) {
-          points.push({ x: (i + 0.5) * stepX, y: room.workPlaneHeight, z: (j + 0.5) * stepZ, nx: 0, ny: 1, nz: 0, type: 'FLOOR' });
+          points.push({ x: (i + 0.5) * stepX, y: (room.workPlaneHeight || 0), z: (j + 0.5) * stepZ, nx: 0, ny: 1, nz: 0, type: 'FLOOR' });
         }
       }
     } else {
-      const centerX = room.width / 2;
-      const centerZ = room.depth / 2;
-      const stepX = room.bodyWidth / GRID_RESOLUTION;
-      const stepZ = room.bodyLength / GRID_RESOLUTION;
+      const centerX = (room.width || 0) / 2;
+      const centerZ = (room.depth || 0) / 2;
+      const stepX = (room.bodyWidth || 0) / GRID_RESOLUTION;
+      const stepZ = (room.bodyLength || 0) / GRID_RESOLUTION;
       for (let i = 0; i < GRID_RESOLUTION; i++) {
         for (let j = 0; j < GRID_RESOLUTION; j++) {
-          points.push({ x: centerX - room.bodyWidth/2 + (i+0.5) * stepX, y: room.bodyClearance + room.bodyHeight, z: centerZ - room.bodyLength/2 + (j+0.5) * stepZ, nx: 0, ny: 1, nz: 0, type: 'BODY_TOP' });
+          points.push({ x: centerX - (room.bodyWidth || 0)/2 + (i+0.5) * stepX, y: (room.bodyClearance || 0) + (room.bodyHeight || 0), z: centerZ - (room.bodyLength || 0)/2 + (j+0.5) * stepZ, nx: 0, ny: 1, nz: 0, type: 'BODY_TOP' });
         }
       }
-      const stepY = room.bodyHeight / GRID_RESOLUTION;
+      const stepY = (room.bodyHeight || 0) / GRID_RESOLUTION;
       for (let i = 0; i < GRID_RESOLUTION; i++) {
         for (let j = 0; j < GRID_RESOLUTION; j++) {
-          points.push({ x: centerX - room.bodyWidth/2, y: room.bodyClearance + (i+0.5) * stepY, z: centerZ - room.bodyLength/2 + (j+0.5) * stepZ, nx: -1, ny: 0, nz: 0, type: 'BODY_SIDE' });
+          points.push({ x: centerX - (room.bodyWidth || 0)/2, y: (room.bodyClearance || 0) + (i+0.5) * stepY, z: centerZ - (room.bodyLength || 0)/2 + (j+0.5) * stepZ, nx: -1, ny: 0, nz: 0, type: 'BODY_SIDE' });
         }
       }
     }
@@ -454,11 +460,11 @@ const App: React.FC = () => {
           const cosPhi = Math.max(0, p_to_l_x * p.nx + p_to_l_y * p.ny + p_to_l_z * p.nz);
           const cosTheta = Math.max(0, l_to_p_x * inst.nx + l_to_p_y * inst.ny + l_to_p_z * inst.nz);
 
-          const intensity0 = light.lumens / Math.PI;
+          const intensity0 = (light.lumens || 0) / Math.PI;
           totalLux += (intensity0 * cosTheta * cosPhi) / distSq;
         });
       });
-      grid.push({ ...p, lux: totalLux, surfaceType: p.type });
+      grid.push({ ...p, lux: totalLux * (room.maintenanceFactor || 0), surfaceType: p.type });
     });
     return grid;
   }, [room, lights, calcMode, activeProjectId]);
@@ -486,26 +492,26 @@ const App: React.FC = () => {
     const margin = 50;
     const availW = planDims.width - margin * 2;
     const availH = planDims.height - margin * 2;
-    const scale = Math.min(availW / room.width, availH / room.depth);
-    const w = room.width * scale;
-    const h = room.depth * scale;
+    const scale = Math.min(availW / (room.width || 1), availH / (room.depth || 1));
+    const w = (room.width || 0) * scale;
+    const h = (room.depth || 0) * scale;
     const g = svg.append("g").attr("transform", `translate(${(planDims.width - w) / 2}, ${(planDims.height - h) / 2})`);
-    const xScale = d3.scaleLinear().domain([0, room.width]).range([0, w]);
-    const zScale = d3.scaleLinear().domain([0, room.depth]).range([h, 0]);
+    const xScale = d3.scaleLinear().domain([0, room.width || 1]).range([0, w]);
+    const zScale = d3.scaleLinear().domain([0, room.depth || 1]).range([h, 0]);
     g.append("rect").attr("width", w).attr("height", h).attr("fill", "#0f172a").attr("stroke", "#334155").attr("stroke-width", 2);
-    const stepX = room.width / GRID_RESOLUTION * scale;
-    const stepZ = room.depth / GRID_RESOLUTION * scale;
+    const stepX = (room.width || 0) / GRID_RESOLUTION * scale;
+    const stepZ = (room.depth || 0) / GRID_RESOLUTION * scale;
     if (calcMode === 'FLOOR') {
       results.forEach(p => {
-        g.append("rect").attr("x", xScale(p.x - room.width / GRID_RESOLUTION / 2)).attr("y", zScale(p.z + room.depth / GRID_RESOLUTION / 2)).attr("width", stepX + 0.5).attr("height", stepZ + 0.5).attr("fill", colorScale(p.lux)).attr("cursor", "crosshair").on("mouseenter", (e) => setHoverInfo({ x: e.clientX, y: e.clientY, lux: p.lux, label: `X: ${p.x.toFixed(1)}m, Z: ${p.z.toFixed(1)}m` })).on("mousemove", (e) => setHoverInfo(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)).on("mouseleave", () => setHoverInfo(null));
+        g.append("rect").attr("x", xScale(p.x - (room.width || 0) / GRID_RESOLUTION / 2)).attr("y", zScale(p.z + (room.depth || 0) / GRID_RESOLUTION / 2)).attr("width", stepX + 0.5).attr("height", stepZ + 0.5).attr("fill", colorScale(p.lux)).attr("cursor", "crosshair").on("mouseenter", (e) => setHoverInfo({ x: e.clientX, y: e.clientY, lux: p.lux, label: `X: ${p.x.toFixed(1)}m, Z: ${p.z.toFixed(1)}m` })).on("mousemove", (e) => setHoverInfo(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)).on("mouseleave", () => setHoverInfo(null));
       });
     } else {
       results.filter(r => r.surfaceType === 'BODY_TOP').forEach(p => {
-        const sw = room.bodyWidth / GRID_RESOLUTION * scale;
-        const sh = room.bodyLength / GRID_RESOLUTION * scale;
-        g.append("rect").attr("x", xScale(p.x - room.bodyWidth / GRID_RESOLUTION / 2)).attr("y", zScale(p.z + room.bodyLength / GRID_RESOLUTION / 2)).attr("width", sw + 0.5).attr("height", sh + 0.5).attr("fill", colorScale(p.lux)).attr("cursor", "crosshair").on("mouseenter", (e) => setHoverInfo({ x: e.clientX, y: e.clientY, lux: p.lux, label: `Body X: ${p.x.toFixed(1)}m, Z: ${p.z.toFixed(1)}m` })).on("mousemove", (e) => setHoverInfo(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)).on("mouseleave", () => setHoverInfo(null));
+        const sw = (room.bodyWidth || 0) / GRID_RESOLUTION * scale;
+        const sh = (room.bodyLength || 0) / GRID_RESOLUTION * scale;
+        g.append("rect").attr("x", xScale(p.x - (room.bodyWidth || 0) / GRID_RESOLUTION / 2)).attr("y", zScale(p.z + (room.bodyLength || 0) / GRID_RESOLUTION / 2)).attr("width", sw + 0.5).attr("height", sh + 0.5).attr("fill", colorScale(p.lux)).attr("cursor", "crosshair").on("mouseenter", (e) => setHoverInfo({ x: e.clientX, y: e.clientY, lux: p.lux, label: `Body X: ${p.x.toFixed(1)}m, Z: ${p.z.toFixed(1)}m` })).on("mousemove", (e) => setHoverInfo(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)).on("mouseleave", () => setHoverInfo(null));
       });
-      g.append("rect").attr("x", xScale(room.width/2 - room.bodyWidth/2)).attr("y", zScale(room.depth/2 + room.bodyLength/2)).attr("width", room.bodyWidth * scale).attr("height", room.bodyLength * scale).attr("fill", "none").attr("stroke", "#fbbf24").attr("stroke-width", 2);
+      g.append("rect").attr("x", xScale((room.width || 0)/2 - (room.bodyWidth || 0)/2)).attr("y", zScale((room.depth || 0)/2 + (room.bodyLength || 0)/2)).attr("width", (room.bodyWidth || 0) * scale).attr("height", (room.bodyLength || 0) * scale).attr("fill", "none").attr("stroke", "#fbbf24").attr("stroke-width", 2);
     }
     lights.forEach(light => {
       getExpandedLights(light, room).forEach(pos => {
@@ -526,36 +532,36 @@ const App: React.FC = () => {
     const margin = 50;
     const availW = sectionDims.width - margin * 2;
     const availH = sectionDims.height - margin * 2;
-    const scale = Math.min(availW / room.width, availH / room.height);
-    const w = room.width * scale;
-    const h = room.height * scale;
+    const scale = Math.min(availW / (room.width || 1), availH / (room.height || 1));
+    const w = (room.width || 0) * scale;
+    const h = (room.height || 0) * scale;
     const g = svg.append("g").attr("transform", `translate(${(sectionDims.width - w) / 2}, ${(sectionDims.height - h) / 2})`);
-    const xScale = d3.scaleLinear().domain([0, room.width]).range([0, w]);
-    const yScale = d3.scaleLinear().domain([0, room.height]).range([h, 0]);
+    const xScale = d3.scaleLinear().domain([0, room.width || 1]).range([0, w]);
+    const yScale = d3.scaleLinear().domain([0, room.height || 1]).range([h, 0]);
     const path = d3.path();
     path.moveTo(xScale(0), yScale(0));
-    path.lineTo(xScale(room.width), yScale(0));
-    path.lineTo(xScale(room.width), yScale(room.height - room.chamfer));
-    path.lineTo(xScale(room.width - room.chamfer), yScale(room.height));
-    path.lineTo(xScale(room.chamfer), yScale(room.height));
-    path.lineTo(xScale(0), yScale(room.height - room.chamfer));
+    path.lineTo(xScale(room.width || 0), yScale(0));
+    path.lineTo(xScale(room.width || 0), yScale((room.height || 0) - (room.chamfer || 0)));
+    path.lineTo(xScale((room.width || 0) - (room.chamfer || 0)), yScale(room.height || 0));
+    path.lineTo(xScale(room.chamfer || 0), yScale(room.height || 0));
+    path.lineTo(xScale(0), yScale((room.height || 0) - (room.chamfer || 0)));
     path.closePath();
     g.append("path").attr("d", path.toString()).attr("fill", "#0f172a").attr("stroke", "#475569").attr("stroke-width", 2);
     if (calcMode === 'FLOOR') {
-      const stepX = room.width / GRID_RESOLUTION * scale;
+      const stepX = (room.width || 0) / GRID_RESOLUTION * scale;
       d3.group(results, d => Math.round(d.x * 100) / 100).forEach((group, x) => {
         const avg = d3.mean(group, d => d.lux) || 0;
-        g.append("rect").attr("x", xScale(Number(x) - room.width / GRID_RESOLUTION / 2)).attr("y", yScale(room.workPlaneHeight) - 5).attr("width", stepX + 0.5).attr("height", 10).attr("fill", colorScale(avg)).attr("opacity", 0.7).attr("cursor", "crosshair").on("mouseenter", (e) => setHoverInfo({ x: e.clientX, y: e.clientY, lux: avg, label: `Avg Lux at X: ${Number(x).toFixed(1)}m` })).on("mousemove", (e) => setHoverInfo(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)).on("mouseleave", () => setHoverInfo(null));
+        g.append("rect").attr("x", xScale(Number(x) - (room.width || 0) / GRID_RESOLUTION / 2)).attr("y", yScale(room.workPlaneHeight || 0) - 5).attr("width", stepX + 0.5).attr("height", 10).attr("fill", colorScale(avg)).attr("opacity", 0.7).attr("cursor", "crosshair").on("mouseenter", (e) => setHoverInfo({ x: e.clientX, y: e.clientY, lux: avg, label: `Avg Lux at X: ${Number(x).toFixed(1)}m` })).on("mousemove", (e) => setHoverInfo(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)).on("mouseleave", () => setHoverInfo(null));
       });
-      g.append("line").attr("x1", 0).attr("x2", w).attr("y1", yScale(room.workPlaneHeight)).attr("y2", yScale(room.workPlaneHeight)).attr("stroke", "#fbbf24").attr("stroke-dasharray", "4").attr("opacity", 0.5);
+      g.append("line").attr("x1", 0).attr("x2", w).attr("y1", yScale(room.workPlaneHeight || 0)).attr("y2", yScale(room.workPlaneHeight || 0)).attr("stroke", "#fbbf24").attr("stroke-dasharray", "4").attr("opacity", 0.5);
     } else {
       const sideGroup = results.filter(r => r.surfaceType === 'BODY_SIDE');
-      const stepY = room.bodyHeight / GRID_RESOLUTION * scale;
+      const stepY = (room.bodyHeight || 0) / GRID_RESOLUTION * scale;
       d3.group(sideGroup, d => Math.round(d.y * 100) / 100).forEach((group, y) => {
         const avg = d3.mean(group, d => d.lux) || 0;
-        g.append("rect").attr("x", xScale(room.width/2 - room.bodyWidth/2) - 15).attr("y", yScale(Number(y) + room.bodyHeight / GRID_RESOLUTION / 2)).attr("width", 15).attr("height", stepY + 0.5).attr("fill", colorScale(avg)).attr("cursor", "crosshair").on("mouseenter", (e) => setHoverInfo({ x: e.clientX, y: e.clientY, lux: avg, label: `Side Avg at H: ${Number(y).toFixed(1)}m` })).on("mousemove", (e) => setHoverInfo(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)).on("mouseleave", () => setHoverInfo(null));
+        g.append("rect").attr("x", xScale((room.width || 0)/2 - (room.bodyWidth || 0)/2) - 15).attr("y", yScale(Number(y) + (room.bodyHeight || 0) / GRID_RESOLUTION / 2)).attr("width", 15).attr("height", stepY + 0.5).attr("fill", colorScale(avg)).attr("cursor", "crosshair").on("mouseenter", (e) => setHoverInfo({ x: e.clientX, y: e.clientY, lux: avg, label: `Side Avg at H: ${Number(y).toFixed(1)}m` })).on("mousemove", (e) => setHoverInfo(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)).on("mouseleave", () => setHoverInfo(null));
       });
-      g.append("rect").attr("x", xScale(room.width/2 - room.bodyWidth/2)).attr("y", yScale(room.bodyClearance + room.bodyHeight)).attr("width", room.bodyWidth * scale).attr("height", room.bodyHeight * scale).attr("fill", "#1e293b").attr("stroke", "#fbbf24").attr("stroke-width", 2);
+      g.append("rect").attr("x", xScale((room.width || 0)/2 - (room.bodyWidth || 0)/2)).attr("y", yScale((room.bodyClearance || 0) + (room.bodyHeight || 0))).attr("width", (room.bodyWidth || 0) * scale).attr("height", (room.bodyHeight || 0) * scale).attr("fill", "#1e293b").attr("stroke", "#fbbf24").attr("stroke-width", 2);
     }
     lights.forEach(light => {
       getExpandedLights(light, room).forEach(pos => {
@@ -636,10 +642,20 @@ const App: React.FC = () => {
               <section className="space-y-4">
                 <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Settings size={12} className="text-slate-400" /> {t.roomGeometry}</div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-4 bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
-                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.width}</label><input type="number" step="0.1" min="0" value={room.width} onChange={e => setRoom({...room, width: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.length}</label><input type="number" step="0.1" min="0" value={room.depth} onChange={e => setRoom({...room, depth: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.height}</label><input type="number" step="0.1" min="0" value={room.height} onChange={e => setRoom({...room, height: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-amber-500 font-black uppercase">{t.slope}</label><input type="number" step="0.1" min="0" value={room.chamfer} onChange={e => setRoom({...room, chamfer: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.width}</label><input type="number" step="0.1" min="0" value={room.width} onChange={e => setRoom({...room, width: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.length}</label><input type="number" step="0.1" min="0" value={room.depth} onChange={e => setRoom({...room, depth: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.height}</label><input type="number" step="0.1" min="0" value={room.height} onChange={e => setRoom({...room, height: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-amber-500 font-black uppercase">{t.slope}</label><input type="number" step="0.1" min="0" value={room.chamfer} onChange={e => setRoom({...room, chamfer: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                </div>
+              </section>
+              <section className="space-y-4">
+                <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Settings size={12} className="text-slate-400" /> {t.maintenanceFactor}</div>
+                <div className="bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-amber-500 uppercase">{t.maintenanceFactor}</label>
+                    <input type="number" step="0.01" min="0" max="1" value={room.maintenanceFactor} onChange={e => setRoom({...room, maintenanceFactor: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                    <p className="text-[9px] text-slate-400 pt-1">{t.maintenanceFactorNote}</p>
+                  </div>
                 </div>
               </section>
               {calcMode === 'FLOOR' && (
@@ -648,7 +664,7 @@ const App: React.FC = () => {
                   <div className="bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
                     <div className="space-y-1">
                       <label className="text-[9px] font-black text-amber-500 uppercase">{t.planeHeight}</label>
-                      <input type="number" step="0.01" min="0" value={room.workPlaneHeight} onChange={e => setRoom({...room, workPlaneHeight: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                      <input type="number" step="0.01" min="0" value={room.workPlaneHeight} onChange={e => setRoom({...room, workPlaneHeight: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
                     </div>
                   </div>
                 </section>
@@ -657,10 +673,10 @@ const App: React.FC = () => {
                 <section className="space-y-4">
                   <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Box size={12} className="text-slate-400" /> {t.bodyGeometry}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-4 bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
-                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyWidth}</label><input type="number" step="0.1" min="0" value={room.bodyWidth} onChange={e => setRoom({...room, bodyWidth: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyLength}</label><input type="number" step="0.1" min="0" value={room.bodyLength} onChange={e => setRoom({...room, bodyLength: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyHeight}</label><input type="number" step="0.1" min="0" value={room.bodyHeight} onChange={e => setRoom({...room, bodyHeight: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-amber-500 uppercase font-black">{t.clearance}</label><input type="number" step="0.1" min="0" value={room.bodyClearance} onChange={e => setRoom({...room, bodyClearance: Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyWidth}</label><input type="number" step="0.1" min="0" value={room.bodyWidth} onChange={e => setRoom({...room, bodyWidth: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyLength}</label><input type="number" step="0.1" min="0" value={room.bodyLength} onChange={e => setRoom({...room, bodyLength: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyHeight}</label><input type="number" step="0.1" min="0" value={room.bodyHeight} onChange={e => setRoom({...room, bodyHeight: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-amber-500 uppercase font-black">{t.clearance}</label><input type="number" step="0.1" min="0" value={room.bodyClearance} onChange={e => setRoom({...room, bodyClearance: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none font-bold" /></div>
                   </div>
                 </section>
               )}
@@ -683,16 +699,16 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-300 uppercase">{t.uLabel}</label>
-                        <input type="number" step="0.01" min="0" value={light.u} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, u: Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                        <input type="number" step="0.01" min="0" value={light.u} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, u: e.target.value === '' ? '' : Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-300 uppercase">{t.vLabel}</label>
-                        <input type="number" step="0.01" min="0" value={light.v} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, v: Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                        <input type="number" step="0.01" min="0" value={light.v} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, v: e.target.value === '' ? '' : Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-                      <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.pitch}</label><input type="number" step="0.1" min="0" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                      <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.lumens}</label><input type="number" step="100" min="0" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                      <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.pitch}</label><input type="number" step="0.1" min="0" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                      <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.lumens}</label><input type="number" step="100" min="0" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
                     </div>
                   </div>
                 ))}

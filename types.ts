@@ -11,24 +11,25 @@ export interface LightSource {
   id: string;
   name: string;
   surface: SurfaceType;
-  u: number; // Normalized coordinate on surface (0-1)
-  v: number; // Normalized coordinate on surface (0-1)
-  lumens: number;
+  u: number | ''; // Normalized coordinate on surface (0-1)
+  v: number | ''; // Normalized coordinate on surface (0-1)
+  lumens: number | '';
   color: string;
-  pitch: number; // Pitch in meters. If > 0, replicate along the primary axis
+  pitch: number | ''; // Pitch in meters. If > 0, replicate along the primary axis
 }
 
 export interface RoomConfig {
-  width: number;
-  depth: number;
-  height: number;
-  chamfer: number; // Size of the 45 degree slope
-  workPlaneHeight: number; // Height of the measurement plane for FLOOR mode
+  width: number | '';
+  depth: number | '';
+  height: number | '';
+  chamfer: number | ''; // Size of the 45 degree slope
+  workPlaneHeight: number | ''; // Height of the measurement plane for FLOOR mode
   // Body dimensions for inspection mode
-  bodyWidth: number;
-  bodyHeight: number;
-  bodyLength: number;
-  bodyClearance: number; // Height from floor to body bottom
+  bodyWidth: number | '';
+  bodyHeight: number | '';
+  bodyLength: number | '';
+  bodyClearance: number | ''; // Height from floor to body bottom
+  maintenanceFactor: number | ''; // Maintenance factor for illuminance calculation
 }
 
 export interface CalculationResult {
