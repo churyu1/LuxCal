@@ -500,15 +500,6 @@ const App: React.FC = () => {
     const zScale = d3.scaleLinear().domain([0, room.depth || 1]).range([h, 0]);
     
     g.append("rect").attr("width", w).attr("height", h).attr("fill", "#0f172a");
-    g.append("line").attr("x1", 0).attr("y1", 0).attr("x2", w).attr("y2", 0).attr("stroke", "#334155").attr("stroke-width", 2).attr("stroke-dasharray", "4 4");
-    g.append("line").attr("x1", 0).attr("y1", h).attr("x2", w).attr("y2", h).attr("stroke", "#334155").attr("stroke-width", 2).attr("stroke-dasharray", "4 4");
-    if ((room.chamfer || 0) > 0) {
-      const cW = (room.chamfer || 0) * scale;
-      g.append("line").attr("x1", cW).attr("y1", 0).attr("x2", cW).attr("y2", h).attr("stroke", "#475569").attr("stroke-width", 1).attr("stroke-dasharray", "2 2");
-      g.append("line").attr("x1", w - cW).attr("y1", 0).attr("x2", w - cW).attr("y2", h).attr("stroke", "#475569").attr("stroke-width", 1).attr("stroke-dasharray", "2 2");
-    }
-    g.append("line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", h).attr("stroke", "#94a3b8").attr("stroke-width", 6).attr("stroke-linecap", "square");
-    g.append("line").attr("x1", w).attr("y1", 0).attr("x2", w).attr("y2", h).attr("stroke", "#94a3b8").attr("stroke-width", 6).attr("stroke-linecap", "square");
 
     const stepX = (room.width || 0) / GRID_RESOLUTION * scale;
     const stepZ = (room.depth || 0) / GRID_RESOLUTION * scale;
@@ -524,6 +515,17 @@ const App: React.FC = () => {
       });
       g.append("rect").attr("x", xScale((room.width || 0)/2 - (room.bodyWidth || 0)/2)).attr("y", zScale((room.depth || 0)/2 + (room.bodyLength || 0)/2)).attr("width", (room.bodyWidth || 0) * scale).attr("height", (room.bodyLength || 0) * scale).attr("fill", "none").attr("stroke", "#fbbf24").attr("stroke-width", 2);
     }
+
+    g.append("line").attr("x1", 0).attr("y1", 0).attr("x2", w).attr("y2", 0).attr("stroke", "#334155").attr("stroke-width", 2).attr("stroke-dasharray", "4 4");
+    g.append("line").attr("x1", 0).attr("y1", h).attr("x2", w).attr("y2", h).attr("stroke", "#334155").attr("stroke-width", 2).attr("stroke-dasharray", "4 4");
+    if ((room.chamfer || 0) > 0) {
+      const cW = (room.chamfer || 0) * scale;
+      g.append("line").attr("x1", cW).attr("y1", 0).attr("x2", cW).attr("y2", h).attr("stroke", "#475569").attr("stroke-width", 1).attr("stroke-dasharray", "2 2");
+      g.append("line").attr("x1", w - cW).attr("y1", 0).attr("x2", w - cW).attr("y2", h).attr("stroke", "#475569").attr("stroke-width", 1).attr("stroke-dasharray", "2 2");
+    }
+    g.append("line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", h).attr("stroke", "#94a3b8").attr("stroke-width", 6).attr("stroke-linecap", "square");
+    g.append("line").attr("x1", w).attr("y1", 0).attr("x2", w).attr("y2", h).attr("stroke", "#94a3b8").attr("stroke-width", 6).attr("stroke-linecap", "square");
+
     lights.forEach(light => {
       getExpandedLights(light, room).forEach(pos => {
         g.append("circle").attr("cx", xScale(pos.x)).attr("cy", zScale(pos.z)).attr("r", 4).attr("fill", light.color).attr("stroke", "#fff").attr("stroke-width", 1.5).attr("filter", "drop-shadow(0 0 4px rgba(255,255,255,0.5))");
