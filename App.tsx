@@ -498,7 +498,18 @@ const App: React.FC = () => {
     const g = svg.append("g").attr("transform", `translate(${(planDims.width - w) / 2}, ${(planDims.height - h) / 2})`);
     const xScale = d3.scaleLinear().domain([0, room.width || 1]).range([0, w]);
     const zScale = d3.scaleLinear().domain([0, room.depth || 1]).range([h, 0]);
-    g.append("rect").attr("width", w).attr("height", h).attr("fill", "#0f172a").attr("stroke", "#334155").attr("stroke-width", 2);
+    
+    g.append("rect").attr("width", w).attr("height", h).attr("fill", "#0f172a");
+    g.append("line").attr("x1", 0).attr("y1", 0).attr("x2", w).attr("y2", 0).attr("stroke", "#334155").attr("stroke-width", 2).attr("stroke-dasharray", "4 4");
+    g.append("line").attr("x1", 0).attr("y1", h).attr("x2", w).attr("y2", h).attr("stroke", "#334155").attr("stroke-width", 2).attr("stroke-dasharray", "4 4");
+    if ((room.chamfer || 0) > 0) {
+      const cW = (room.chamfer || 0) * scale;
+      g.append("line").attr("x1", cW).attr("y1", 0).attr("x2", cW).attr("y2", h).attr("stroke", "#475569").attr("stroke-width", 1).attr("stroke-dasharray", "2 2");
+      g.append("line").attr("x1", w - cW).attr("y1", 0).attr("x2", w - cW).attr("y2", h).attr("stroke", "#475569").attr("stroke-width", 1).attr("stroke-dasharray", "2 2");
+    }
+    g.append("line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", h).attr("stroke", "#94a3b8").attr("stroke-width", 6).attr("stroke-linecap", "square");
+    g.append("line").attr("x1", w).attr("y1", 0).attr("x2", w).attr("y2", h).attr("stroke", "#94a3b8").attr("stroke-width", 6).attr("stroke-linecap", "square");
+
     const stepX = (room.width || 0) / GRID_RESOLUTION * scale;
     const stepZ = (room.depth || 0) / GRID_RESOLUTION * scale;
     if (calcMode === 'FLOOR') {
@@ -546,7 +557,19 @@ const App: React.FC = () => {
     path.lineTo(xScale(room.chamfer || 0), yScale(room.height || 0));
     path.lineTo(xScale(0), yScale((room.height || 0) - (room.chamfer || 0)));
     path.closePath();
-    g.append("path").attr("d", path.toString()).attr("fill", "#0f172a").attr("stroke", "#475569").attr("stroke-width", 2);
+    
+    g.append("path").attr("d", path.toString()).attr("fill", "#0f172a");
+    g.append("line").attr("x1", xScale(0)).attr("y1", yScale(0)).attr("x2", xScale(room.width || 0)).attr("y2", yScale(0)).attr("stroke", "#334155").attr("stroke-width", 2).attr("stroke-dasharray", "4 4");
+    
+    const wallPath = d3.path();
+    wallPath.moveTo(xScale(0), yScale(0));
+    wallPath.lineTo(xScale(0), yScale((room.height || 0) - (room.chamfer || 0)));
+    wallPath.lineTo(xScale(room.chamfer || 0), yScale(room.height || 0));
+    wallPath.lineTo(xScale((room.width || 0) - (room.chamfer || 0)), yScale(room.height || 0));
+    wallPath.lineTo(xScale(room.width || 0), yScale((room.height || 0) - (room.chamfer || 0)));
+    wallPath.lineTo(xScale(room.width || 0), yScale(0));
+    g.append("path").attr("d", wallPath.toString()).attr("fill", "none").attr("stroke", "#94a3b8").attr("stroke-width", 6).attr("stroke-linecap", "square");
+
     if (calcMode === 'FLOOR') {
       const stepX = (room.width || 0) / GRID_RESOLUTION * scale;
       d3.group(results, d => Math.round(d.x * 100) / 100).forEach((group, x) => {
