@@ -101,7 +101,21 @@ const translations = {
     refLambertDesc: "光源は全方向へ均等に光を出す点光源ではなく、設置された面の法線方向に最大の強さを持ち、角度に従って減衰する「指向性光源」として定義されています。放射光度は cosθ（放射角の余弦）に比例します。",
     refIncidenceTitle: "2. 受照面の入射角補正",
     refIncidenceDesc: "光が受照面に斜めに入るほど、単位面積あたりの光束は減少します。これも cosφ（入射角の余弦）を用いて計算されます。",
-    refFormula: "E = (Φ / π) * cosθ * cosφ / d²",
+    refFormula: "E = (Φ / π) * (cosθ * cosφ / d²) * M",
+    refPointTitle: "計算の3つのポイント",
+    refPoint1Title: "① 逆二乗の法則 (1/d²)",
+    refPoint1Desc: "光の強さは、光源からの距離の2乗に反比例して減衰します。距離が2倍になれば、明るさは4分の1になります。",
+    refPoint2Title: "② ランベルトの余弦則 (放射側：cosθ)",
+    refPoint2Desc: "このアプリの光源は、全方向に均等に光を出す「点」ではなく、指向性を持つ光源として計算されています。光源の真下（正面）が最も強く、角度が斜めになるほど放射される光の強さが cosθ に比例して弱まります。",
+    refPoint3Title: "③ 入射角補正 (受照側：cosφ)",
+    refPoint3Desc: "光が測定面に対して斜めに入るほど、光が照らす面積が広がり、単位面積あたりの明るさ（照度）は低下します。これも入射角の余弦 (cosφ) を用いて補正しています。",
+    refSpecialGeoTitle: "3. 特殊な幾何学計算",
+    refSpecialGeoDesc: "このアプリの特徴として、部屋の形状（壁や45度の斜め面）に合わせた動的な法線ベクトル計算を行っています。",
+    refSpecialGeoCeiling: "天井の照明: 真下（垂直方向）を向いています。",
+    refSpecialGeoWall: "壁面の照明: 部屋の内側（水平方向）を向いています。",
+    refSpecialGeoSlope: "斜め面（45度面）の照明: 部屋の中央に向かって斜め45度下を向くように自動的に計算されます。",
+    refSpecialGeoConclusion: "これにより、照明を配置する場所によって光の広がり方が自動的に変化し、複雑な室内形状でも正確な直射照度の分布を導き出しています。",
+    refDirectLightNote: "※ 現在の計算は「直接光」のみを対象としており、壁や床からの反射（間接光）は計算に含まれていないため、実際の環境よりも数値が低めに出る傾向があります。",
     refGeoTitle: "幾何学的処理と45度傾斜面",
     refGeoDesc: "特殊な室内形状に対応するため、全ての光源と計算点において動的な法線ベクトル計算を行っています。",
     refSlopeDesc: "天井と壁の接続部の45度面（斜め面）に配置された照明は、部屋の内側（45度斜め下）を向くように法線が自動設定され、配光の中心がその方向へ向けられます。",
@@ -162,7 +176,21 @@ const translations = {
     refLambertDesc: "Light sources are defined as directional (Lambertian) sources rather than isotropic points. Maximum intensity is aligned with the surface normal, decaying by cosθ as the angle increases.",
     refIncidenceTitle: "2. Incidence Angle Correction",
     refIncidenceDesc: "Illuminance decreases as light hits the surface at shallower angles. This is corrected using cosφ (angle of incidence).",
-    refFormula: "E = (Φ / π) * cosθ * cosφ / d²",
+    refFormula: "E = (Φ / π) * (cosθ * cosφ / d²) * M",
+    refPointTitle: "Three Key Points of Calculation",
+    refPoint1Title: "① Inverse Square Law (1/d²)",
+    refPoint1Desc: "Light intensity decays in inverse proportion to the square of the distance from the source. If the distance doubles, the brightness becomes one-fourth.",
+    refPoint2Title: "② Lambert's Cosine Law (Emission: cosθ)",
+    refPoint2Desc: "The light sources in this app are calculated as directional sources rather than points that emit light equally in all directions. It is strongest directly below (front) the source, and the intensity of emitted light decreases in proportion to cosθ as the angle becomes shallower.",
+    refPoint3Title: "③ Incidence Angle Correction (Receiver: cosφ)",
+    refPoint3Desc: "The shallower the angle at which light enters the measurement plane, the wider the area illuminated and the lower the brightness (illuminance) per unit area. This is also corrected using the cosine of the incidence angle (cosφ).",
+    refSpecialGeoTitle: "3. Special Geometric Calculation",
+    refSpecialGeoDesc: "As a feature of this app, dynamic normal vector calculations are performed according to the shape of the room (walls and 45-degree slopes).",
+    refSpecialGeoCeiling: "Ceiling lighting: Oriented directly downwards (vertical direction).",
+    refSpecialGeoWall: "Wall lighting: Oriented towards the interior of the room (horizontal direction).",
+    refSpecialGeoSlope: "Slope (45-degree) lighting: Automatically calculated to point 45 degrees diagonally downwards towards the center of the room.",
+    refSpecialGeoConclusion: "This allows the spread of light to change automatically depending on where the lighting is placed, deriving an accurate direct illuminance distribution even for complex indoor shapes.",
+    refDirectLightNote: "* Current calculations only cover 'direct light'. Reflections from walls or floors (indirect light) are not included, so values tend to be lower than in actual environments.",
     refGeoTitle: "Geometric Processing & 45° Chamfers",
     refGeoDesc: "Dynamic normal vector calculations are performed for all light sources and calculation points to handle complex geometries.",
     refSlopeDesc: "Lights placed on the 45° sloped surfaces are automatically oriented towards the interior (45° downwards), aligning the distribution peak accordingly.",
@@ -205,74 +233,102 @@ const TechnicalReference: React.FC<{ t: any }> = ({ t }) => (
       </header>
 
       <div className="grid grid-cols-1 gap-8">
-        {/* Core Algorithm Section */}
+        {/* 3 Key Points Section */}
+        <section className="bg-slate-800/50 p-8 rounded-3xl border border-slate-700 space-y-6">
+          <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
+            <Zap className="text-amber-500" size={24} />
+            1. {t.refPointTitle}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { title: t.refPoint1Title, desc: t.refPoint1Desc },
+              { title: t.refPoint2Title, desc: t.refPoint2Desc },
+              { title: t.refPoint3Title, desc: t.refPoint3Desc }
+            ].map((point, idx) => (
+              <div key={idx} className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700/50 space-y-3">
+                <h3 className="text-amber-400 font-bold text-sm">{point.title}</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">{point.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Basic Formula Section */}
         <section className="bg-slate-800/50 p-8 rounded-3xl border border-slate-700 space-y-6">
           <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
             <Activity className="text-amber-500" size={24} />
-            {t.refAlgoTitle}
+            2. {t.refAlgoTitle}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <h3 className="text-amber-400 font-bold flex items-center gap-2">
-                <ChevronRight size={16} /> {t.refLambertTitle}
-              </h3>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                {t.refLambertDesc}
+              <p className="text-slate-300 leading-relaxed">
+                {t.refAlgoDesc}
               </p>
-              
-              <h3 className="text-amber-400 font-bold flex items-center gap-2">
-                <ChevronRight size={16} /> {t.refIncidenceTitle}
-              </h3>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                {t.refIncidenceDesc}
-              </p>
+              <div className="space-y-2">
+                <h3 className="text-amber-400 font-bold flex items-center gap-2">
+                  <ChevronRight size={16} /> {t.refLambertTitle}
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {t.refLambertDesc}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-amber-400 font-bold flex items-center gap-2">
+                  <ChevronRight size={16} /> {t.refIncidenceTitle}
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {t.refIncidenceDesc}
+                </p>
+              </div>
             </div>
 
             <div className="bg-slate-950 p-8 rounded-2xl flex flex-col items-center justify-center border border-slate-800 shadow-inner space-y-4">
-              <div className="text-3xl font-mono text-amber-400 text-center italic drop-shadow-md">
+              <div className="text-2xl font-mono text-amber-400 text-center italic drop-shadow-md">
                 {t.refFormula}
               </div>
               <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[11px] font-mono text-slate-400">
-                <div className="flex gap-2"><span className="text-white font-bold">E:</span> 照度 [Lux]</div>
-                <div className="flex gap-2"><span className="text-white font-bold">Φ:</span> 全光束 [Lumen]</div>
-                <div className="flex gap-2"><span className="text-white font-bold">θ:</span> 放射角</div>
-                <div className="flex gap-2"><span className="text-white font-bold">φ:</span> 入射角</div>
-                <div className="flex gap-2"><span className="text-white font-bold">d:</span> 距離 [m]</div>
-                <div className="flex gap-2"><span className="text-white font-bold">π:</span> 半球放射定数</div>
+                <div className="flex gap-2"><span className="text-white font-bold">E:</span> {t.analysis} [Lux]</div>
+                <div className="flex gap-2"><span className="text-white font-bold">Φ:</span> {t.lumens} [Lumen]</div>
+                <div className="flex gap-2"><span className="text-white font-bold">θ:</span> {t.refPoint2Title.split('：')[1] || 'Emission Angle'}</div>
+                <div className="flex gap-2"><span className="text-white font-bold">φ:</span> {t.refPoint3Title.split('：')[1] || 'Incidence Angle'}</div>
+                <div className="flex gap-2"><span className="text-white font-bold">d:</span> {t.pts.split(' ')[0] || 'Distance'} [m]</div>
+                <div className="flex gap-2"><span className="text-white font-bold">M:</span> {t.maintenanceFactor}</div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Geometry & Slope Section */}
+        {/* Special Geometry Section */}
         <section className="bg-slate-800/50 p-8 rounded-3xl border border-slate-700 space-y-6">
           <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
             <Layout className="text-blue-400" size={24} />
-            {t.refGeoTitle}
+            {t.refSpecialGeoTitle}
           </h2>
           <div className="space-y-6">
-            <p className="text-slate-300">{t.refGeoDesc}</p>
+            <p className="text-slate-300">{t.refSpecialGeoDesc}</p>
             
-            <div className="bg-slate-950/50 p-6 rounded-2xl border border-slate-700/50">
-              <h4 className="text-blue-400 text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Activity size={14} /> 45° Slope Calculation
-              </h4>
-              <p className="text-sm text-slate-400 leading-relaxed mb-4">
-                {t.refSlopeDesc}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { label: t.surfaces[SurfaceType.CEILING], desc: t.refSpecialGeoCeiling },
+                { label: t.surfaces[SurfaceType.WALL_EAST], desc: t.refSpecialGeoWall },
+                { label: t.surfaces[SurfaceType.SLOPE_EAST], desc: t.refSpecialGeoSlope }
+              ].map((item, idx) => (
+                <div key={idx} className="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                  <div className="text-[10px] text-blue-400 font-bold mb-2 uppercase tracking-wider">{item.label}</div>
+                  <div className="text-xs text-slate-400 leading-relaxed">{item.desc}</div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-sm text-slate-300 italic border-l-2 border-blue-500/50 pl-4">
+              {t.refSpecialGeoConclusion}
+            </p>
+
+            <div className="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20">
+              <p className="text-xs text-amber-200/70 leading-relaxed">
+                {t.refDirectLightNote}
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {[
-                  { label: "CEILING", dir: "(0, -1, 0)" },
-                  { label: "SLOPE EAST", dir: "(-0.7, -0.7, 0)" },
-                  { label: "WALL EAST", dir: "(-1, 0, 0)" }
-                ].map(item => (
-                  <div key={item.label} className="bg-slate-900 p-3 rounded-xl border border-slate-800 text-center">
-                    <div className="text-[10px] text-slate-500 font-bold mb-1">{item.label}</div>
-                    <div className="text-xs font-mono text-blue-300">{item.dir}</div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </section>
@@ -710,33 +766,41 @@ const App: React.FC = () => {
                   <span>{t.lights} ({lights.length} Types / {totalLightPoints} {t.pts})</span>
                   <button onClick={() => setLights([...lights, { id: Math.random().toString(36).substr(2, 9), name: `L`, surface: SurfaceType.CEILING, u: 0.5, v: 0.5, lumens: 4000, color: '#facc15', pitch: 0 }])} className="bg-amber-500 p-1.5 rounded-full hover:bg-amber-400 transition-colors shadow-lg"><Plus size={14} className="text-slate-900" /></button>
                 </div>
-                {lights.map(light => (
-                  <div key={light.id} className="bg-slate-700/40 p-4 rounded-2xl border border-slate-600/50 space-y-4">
-                    <div className="flex justify-between items-center">
-                      <select value={light.surface} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, surface: e.target.value as SurfaceType } : l))} className="bg-transparent border-none text-[10px] font-black text-slate-200 uppercase outline-none">
-                        {Object.values(SurfaceType).map(s => <option key={s} value={s} className="bg-slate-800 text-white">{t.surfaces[s]}</option>)}
-                      </select>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => setLights([...lights, { ...light, id: Math.random().toString(36).substr(2, 9), name: `${light.name} (Copy)` }])} className="text-slate-400 hover:text-amber-500 transition-colors"><Copy size={12} /></button>
-                        <button onClick={() => setLights(lights.filter(l => l.id !== light.id))} className="text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>
+                {lights.map(light => {
+                  const borderClass = light.surface === SurfaceType.CEILING ? "border-t-8 border-yellow-300" :
+                                     light.surface === SurfaceType.WALL_EAST ? "border-r-8 border-cyan-400" :
+                                     light.surface === SurfaceType.WALL_WEST ? "border-l-8 border-cyan-400" :
+                                     light.surface === SurfaceType.SLOPE_EAST ? "border-t-8 border-r-8 border-emerald-400" :
+                                     light.surface === SurfaceType.SLOPE_WEST ? "border-t-8 border-l-8 border-emerald-400" :
+                                     "";
+                  return (
+                    <div key={light.id} className={`bg-slate-700/40 p-4 rounded-2xl border border-slate-600/50 space-y-4 ${borderClass}`}>
+                      <div className="flex justify-between items-center">
+                        <select value={light.surface} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, surface: e.target.value as SurfaceType } : l))} className="bg-transparent border-none text-[10px] font-black text-slate-200 uppercase outline-none">
+                          {Object.values(SurfaceType).map(s => <option key={s} value={s} className="bg-slate-800 text-white">{t.surfaces[s]}</option>)}
+                        </select>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setLights([...lights, { ...light, id: Math.random().toString(36).substr(2, 9), name: `${light.name} (Copy)` }])} className="text-slate-400 hover:text-amber-500 transition-colors"><Copy size={12} /></button>
+                          <button onClick={() => setLights(lights.filter(l => l.id !== light.id))} className="text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-300 uppercase">{t.uLabel}</label>
+                          <input type="number" step="0.01" min="0" value={light.u} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, u: e.target.value === '' ? '' : Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-300 uppercase">{t.vLabel}</label>
+                          <input type="number" step="0.01" min="0" value={light.v} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, v: e.target.value === '' ? '' : Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                        <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.pitch}</label><input type="number" step="0.1" min="0" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                        <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.lumens}</label><input type="number" step="100" min="0" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-300 uppercase">{t.uLabel}</label>
-                        <input type="number" step="0.01" min="0" value={light.u} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, u: e.target.value === '' ? '' : Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-300 uppercase">{t.vLabel}</label>
-                        <input type="number" step="0.01" min="0" value={light.v} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, v: e.target.value === '' ? '' : Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-                      <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.pitch}</label><input type="number" step="0.1" min="0" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                      <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.lumens}</label><input type="number" step="100" min="0" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </section>
             </div>
           </aside>
