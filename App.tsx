@@ -22,7 +22,8 @@ import {
   CheckCircle2,
   ChevronRight,
   Languages,
-  Activity
+  Activity,
+  List
 } from 'lucide-react';
 import { RoomConfig, LightSource, SurfaceType, CalculationResult } from './types';
 
@@ -66,7 +67,7 @@ const translations = {
     length: "奥行き (m)",
     height: "高さ (m)",
     slope: "斜め面 (m)",
-    measurementPlane: "測定面",
+    measurementPlane: "詳細設定",
     planeHeight: "測定高さ (m)",
     bodyGeometry: "ボディ形状",
     bodyWidth: "ボディ幅 (m)",
@@ -75,7 +76,8 @@ const translations = {
     clearance: "床面クリアランス (m)",
     lights: "照明",
     pts: "箇所",
-    uLabel: "U (面内位置 0-1)",
+    uLabelWidth: "U (幅方向 0-1)",
+    uLabelHeight: "U (高さ方向 0-1)",
     vLabel: "V (奥行方向 0-1)",
     pitch: "ピッチ (m)",
     lumens: "全光束 (lm)",
@@ -119,6 +121,14 @@ const translations = {
     refGeoTitle: "幾何学的処理と45度傾斜面",
     refGeoDesc: "特殊な室内形状に対応するため、全ての光源と計算点において動的な法線ベクトル計算を行っています。",
     refSlopeDesc: "天井と壁の接続部の45度面（斜め面）に配置された照明は、部屋の内側（45度斜め下）を向くように法線が自動設定され、配光の中心がその方向へ向けられます。",
+    lightList: "照明一覧",
+    no: "No.",
+    surface: "設置場所",
+    position: "位置",
+    actions: "操作",
+    close: "閉じる",
+    ratioMode: "比率 (0-1)",
+    absMode: "実数値 (mm)",
     surfaces: {
       [SurfaceType.CEILING]: "天井",
       [SurfaceType.WALL_EAST]: "壁面 (東)",
@@ -141,8 +151,8 @@ const translations = {
     length: "Length (m)",
     height: "Height (m)",
     slope: "Slope (m)",
-    measurementPlane: "Measurement Plane",
-    planeHeight: "Height (m)",
+    measurementPlane: "Advanced Settings",
+    planeHeight: "Measurement Height (m)",
     bodyGeometry: "Body Geometry",
     bodyWidth: "Body Width (m)",
     bodyLength: "Body Length (m)",
@@ -150,7 +160,8 @@ const translations = {
     clearance: "Clearance (m)",
     lights: "Lights",
     pts: "Pts",
-    uLabel: "U (Horiz/Vert 0-1)",
+    uLabelWidth: "U (Width 0-1)",
+    uLabelHeight: "U (Height 0-1)",
     vLabel: "V (Depth 0-1)",
     pitch: "Pitch (m)",
     lumens: "Lumens (lm)",
@@ -194,6 +205,14 @@ const translations = {
     refGeoTitle: "Geometric Processing & 45° Chamfers",
     refGeoDesc: "Dynamic normal vector calculations are performed for all light sources and calculation points to handle complex geometries.",
     refSlopeDesc: "Lights placed on the 45° sloped surfaces are automatically oriented towards the interior (45° downwards), aligning the distribution peak accordingly.",
+    lightList: "Light List",
+    no: "No.",
+    surface: "Surface",
+    position: "Position",
+    actions: "Actions",
+    close: "Close",
+    ratioMode: "Ratio (0-1)",
+    absMode: "Actual (mm)",
     surfaces: {
       [SurfaceType.CEILING]: "Ceiling",
       [SurfaceType.WALL_EAST]: "Wall (East)",
@@ -353,6 +372,7 @@ const App: React.FC = () => {
   const sectionSvgRef = useRef<SVGSVGElement>(null);
   const planContainerRef = useRef<HTMLDivElement>(null);
   const sectionContainerRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
 
   const [planDims, setPlanDims] = useState({ width: 0, height: 0 });
   const [sectionDims, setSectionDims] = useState({ width: 0, height: 0 });
@@ -374,6 +394,8 @@ const App: React.FC = () => {
 
   const [showGuide, setShowGuide] = useState(true);
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
+  const [showLightListModal, setShowLightListModal] = useState(false);
+  const [inputMode, setInputMode] = useState<'RATIO' | 'ABS'>('RATIO');
 
   useEffect(() => {
     const observer = new ResizeObserver((entries) => {
@@ -604,7 +626,8 @@ const App: React.FC = () => {
     const scale = Math.min(availW / (room.width || 1), availH / (room.height || 1));
     const w = (room.width || 0) * scale;
     const h = (room.height || 0) * scale;
-    const g = svg.append("g").attr("transform", `translate(${(sectionDims.width - w) / 2}, ${(sectionDims.height - h) / 2})`);
+    // Shift the drawing down and right to make room for dimensions
+    const g = svg.append("g").attr("transform", `translate(${(sectionDims.width - w) / 2 + 20}, ${(sectionDims.height - h) / 2 + 30})`);
     const xScale = d3.scaleLinear().domain([0, room.width || 1]).range([0, w]);
     const yScale = d3.scaleLinear().domain([0, room.height || 1]).range([h, 0]);
     const path = d3.path();
@@ -627,6 +650,74 @@ const App: React.FC = () => {
     wallPath.lineTo(xScale(room.width || 0), yScale((room.height || 0) - (room.chamfer || 0)));
     wallPath.lineTo(xScale(room.width || 0), yScale(0));
     g.append("path").attr("d", wallPath.toString()).attr("fill", "none").attr("stroke", "#94a3b8").attr("stroke-width", 6).attr("stroke-linecap", "square");
+
+    // --- Dimension Lines ---
+    const dimColor = "#cbd5e1";
+    const dimLineStyle = "stroke: " + dimColor + "; stroke-width: 1px;";
+    const dimTextStyle = "fill: " + dimColor + "; font-size: 10px; font-family: monospace; text-anchor: middle;";
+    const tickSize = 6;
+    const offset1 = 20;
+    const offset2 = 40;
+
+    const drawDimLine = (x1: number, y1: number, x2: number, y2: number, text: string, textOffset: number = -5) => {
+      g.append("line").attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("style", dimLineStyle);
+      // Ticks
+      g.append("line").attr("x1", x1 - tickSize).attr("y1", y1 + tickSize).attr("x2", x1 + tickSize).attr("y2", y1 - tickSize).attr("style", dimLineStyle);
+      g.append("line").attr("x1", x2 - tickSize).attr("y1", y2 + tickSize).attr("x2", x2 + tickSize).attr("y2", y2 - tickSize).attr("style", dimLineStyle);
+      // Text
+      const cx = (x1 + x2) / 2;
+      const cy = (y1 + y2) / 2;
+      const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+      g.append("text")
+        .attr("x", cx)
+        .attr("y", cy + textOffset)
+        .attr("transform", `rotate(${angle}, ${cx}, ${cy})`)
+        .attr("style", dimTextStyle)
+        .text(text);
+    };
+
+    const drawExtLine = (x1: number, y1: number, x2: number, y2: number) => {
+      g.append("line").attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("style", dimLineStyle);
+    };
+
+    const W = room.width || 0;
+    const H = room.height || 0;
+    const C = room.chamfer || 0;
+
+    // Top Dimensions (Horizontal)
+    if (W > 0) {
+      // Overall Width
+      drawExtLine(xScale(0), yScale(H - C), xScale(0), yScale(H) - offset2 - 10);
+      drawExtLine(xScale(W), yScale(H - C), xScale(W), yScale(H) - offset2 - 10);
+      drawDimLine(xScale(0), yScale(H) - offset2, xScale(W), yScale(H) - offset2, `${Math.round(W * 1000)}`);
+
+      if (C > 0 && W > 2 * C) {
+        // Segmented Widths
+        drawExtLine(xScale(C), yScale(H), xScale(C), yScale(H) - offset1 - 10);
+        drawExtLine(xScale(W - C), yScale(H), xScale(W - C), yScale(H) - offset1 - 10);
+        
+        drawDimLine(xScale(0), yScale(H) - offset1, xScale(C), yScale(H) - offset1, `${Math.round(C * 1000)}`);
+        drawDimLine(xScale(C), yScale(H) - offset1, xScale(W - C), yScale(H) - offset1, `${Math.round((W - 2 * C) * 1000)}`);
+        drawDimLine(xScale(W - C), yScale(H) - offset1, xScale(W), yScale(H) - offset1, `${Math.round(C * 1000)}`);
+      }
+    }
+
+    // Left Dimensions (Vertical)
+    if (H > 0) {
+      // Overall Height
+      drawExtLine(xScale(0), yScale(0), xScale(0) - offset2 - 10, yScale(0));
+      drawExtLine(xScale(C), yScale(H), xScale(0) - offset2 - 10, yScale(H));
+      drawDimLine(xScale(0) - offset2, yScale(0), xScale(0) - offset2, yScale(H), `${Math.round(H * 1000)}`, -5);
+
+      if (C > 0 && H > C) {
+        // Segmented Heights
+        drawExtLine(xScale(0), yScale(H - C), xScale(0) - offset1 - 10, yScale(H - C));
+        
+        drawDimLine(xScale(0) - offset1, yScale(0), xScale(0) - offset1, yScale(H - C), `${Math.round((H - C) * 1000)}`, -5);
+        drawDimLine(xScale(0) - offset1, yScale(H - C), xScale(0) - offset1, yScale(H), `${Math.round(C * 1000)}`, -5);
+      }
+    }
+    // --- End Dimension Lines ---
 
     if (calcMode === 'FLOOR') {
       const stepX = (room.width || 0) / GRID_RESOLUTION * scale;
@@ -714,59 +805,87 @@ const App: React.FC = () => {
 
       {activeProjectId === INFO_TAB_ID ? <TechnicalReference t={t} /> : (
         <div className="flex flex-1 overflow-hidden">
-          <aside className="w-full lg:w-96 bg-slate-800 border-r border-slate-700 flex flex-col shadow-2xl overflow-y-auto z-20">
+          <aside ref={sidebarRef} className="w-full lg:w-96 bg-slate-800 border-r border-slate-700 flex flex-col shadow-2xl overflow-y-auto z-20">
             <div className="p-6 space-y-8">
               <div className="grid grid-cols-2 gap-2 bg-slate-900/50 p-1 rounded-xl border border-slate-700">
                 <button onClick={() => setCalcMode('FLOOR')} className={`flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${calcMode === 'FLOOR' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Layout size={14} /> {t.floorPlan}</button>
                 <button onClick={() => setCalcMode('BODY')} className={`flex items-center justify-center gap-2 py-2 text-xs font-bold rounded-lg transition-all ${calcMode === 'BODY' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><Box size={14} /> {t.bodyInsp}</button>
               </div>
               <section className="space-y-4">
-                <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Settings size={12} className="text-slate-400" /> {t.roomGeometry}</div>
+                <div className="text-[10px] font-black text-slate-200 tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Settings size={12} className="text-slate-400" /> {t.roomGeometry}</div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-4 bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
-                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.width}</label><input type="number" step="0.1" min="0" value={room.width} onChange={e => setRoom({...room, width: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.length}</label><input type="number" step="0.1" min="0" value={room.depth} onChange={e => setRoom({...room, depth: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.height}</label><input type="number" step="0.1" min="0" value={room.height} onChange={e => setRoom({...room, height: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[9px] text-amber-500 font-black uppercase">{t.slope}</label><input type="number" step="0.1" min="0" value={room.chamfer} onChange={e => setRoom({...room, chamfer: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold">{t.width}</label><input type="number" step="0.1" min="0" value={room.width} onChange={e => setRoom({...room, width: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold">{t.length}</label><input type="number" step="0.1" min="0" value={room.depth} onChange={e => setRoom({...room, depth: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold">{t.height}</label><input type="number" step="0.1" min="0" value={room.height} onChange={e => setRoom({...room, height: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                  <div className="space-y-1"><label className="text-[9px] text-amber-500 font-black">{t.slope}</label><input type="number" step="0.1" min="0" value={room.chamfer} onChange={e => setRoom({...room, chamfer: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
                 </div>
               </section>
               <section className="space-y-4">
-                <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Settings size={12} className="text-slate-400" /> {t.maintenanceFactor}</div>
-                <div className="bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
+                <div className="text-[10px] font-black text-slate-200 tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Settings size={12} className="text-slate-400" /> {t.measurementPlane}</div>
+                <div className="bg-slate-700/20 p-4 rounded-2xl border border-slate-700 space-y-6">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-amber-500 uppercase">{t.maintenanceFactor}</label>
+                    <label className="text-[9px] font-black text-slate-300">{t.maintenanceFactor}</label>
                     <input type="number" step="0.01" min="0" max="1" value={room.maintenanceFactor} onChange={e => setRoom({...room, maintenanceFactor: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
                     <p className="text-[9px] text-slate-400 pt-1">{t.maintenanceFactorNote}</p>
                   </div>
-                </div>
-              </section>
-              {calcMode === 'FLOOR' && (
-                <section className="space-y-4">
-                  <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Ruler size={12} className="text-slate-400" /> {t.measurementPlane}</div>
-                  <div className="bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
+                  {calcMode === 'FLOOR' && (
                     <div className="space-y-1">
-                      <label className="text-[9px] font-black text-amber-500 uppercase">{t.planeHeight}</label>
+                      <label className="text-[9px] font-black text-slate-300">{t.planeHeight}</label>
                       <input type="number" step="0.01" min="0" value={room.workPlaneHeight} onChange={e => setRoom({...room, workPlaneHeight: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
                     </div>
-                  </div>
-                </section>
-              )}
+                  )}
+                </div>
+              </section>
               {calcMode === 'BODY' && (
                 <section className="space-y-4">
-                  <div className="text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Box size={12} className="text-slate-400" /> {t.bodyGeometry}</div>
+                  <div className="text-[10px] font-black text-slate-200 tracking-widest border-b border-slate-700 pb-2 flex items-center gap-2"><Box size={12} className="text-slate-400" /> {t.bodyGeometry}</div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-4 bg-slate-700/20 p-4 rounded-2xl border border-slate-700">
-                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyWidth}</label><input type="number" step="0.1" min="0" value={room.bodyWidth} onChange={e => setRoom({...room, bodyWidth: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyLength}</label><input type="number" step="0.1" min="0" value={room.bodyLength} onChange={e => setRoom({...room, bodyLength: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.bodyHeight}</label><input type="number" step="0.1" min="0" value={room.bodyHeight} onChange={e => setRoom({...room, bodyHeight: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-amber-500 uppercase font-black">{t.clearance}</label><input type="number" step="0.1" min="0" value={room.bodyClearance} onChange={e => setRoom({...room, bodyClearance: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold">{t.bodyWidth}</label><input type="number" step="0.1" min="0" value={room.bodyWidth} onChange={e => setRoom({...room, bodyWidth: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold">{t.bodyLength}</label><input type="number" step="0.1" min="0" value={room.bodyLength} onChange={e => setRoom({...room, bodyLength: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold">{t.bodyHeight}</label><input type="number" step="0.1" min="0" value={room.bodyHeight} onChange={e => setRoom({...room, bodyHeight: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-amber-500 font-black">{t.clearance}</label><input type="number" step="0.1" min="0" value={room.bodyClearance} onChange={e => setRoom({...room, bodyClearance: e.target.value === '' ? '' : Number(e.target.value)})} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none font-bold" /></div>
                   </div>
                 </section>
               )}
               <section className="space-y-4">
-                <div className="flex items-center justify-between text-[10px] font-black text-slate-200 uppercase tracking-widest border-b border-slate-700 pb-2">
-                  <span>{t.lights} ({lights.length} Types / {totalLightPoints} {t.pts})</span>
-                  <button onClick={() => setLights([...lights, { id: Math.random().toString(36).substr(2, 9), name: `L`, surface: SurfaceType.CEILING, u: 0.5, v: 0.5, lumens: 4000, color: '#facc15', pitch: 0 }])} className="bg-amber-500 p-1.5 rounded-full hover:bg-amber-400 transition-colors shadow-lg"><Plus size={14} className="text-slate-900" /></button>
+                <div className="flex items-center justify-between text-[10px] font-black text-slate-200 tracking-widest border-b border-slate-700 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span>{t.lights} ({lights.length} Types / {totalLightPoints} {t.pts})</span>
+                    <button 
+                      onClick={() => setShowLightListModal(true)}
+                      className="p-1 rounded bg-slate-700 hover:bg-slate-600 transition-colors text-amber-500"
+                      title={t.lightList}
+                    >
+                      <List size={12} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1 bg-slate-900/50 p-0.5 rounded-lg border border-slate-700">
+                    <button 
+                      onClick={() => setInputMode('RATIO')}
+                      className={`px-2 py-1 rounded text-[8px] transition-all ${inputMode === 'RATIO' ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      %
+                    </button>
+                    <button 
+                      onClick={() => setInputMode('ABS')}
+                      className={`px-2 py-1 rounded text-[8px] transition-all ${inputMode === 'ABS' ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      mm
+                    </button>
+                  </div>
+                  <button onClick={() => {
+                    setLights([...lights, { id: Math.random().toString(36).substr(2, 9), name: `L`, surface: SurfaceType.CEILING, u: 0.5, v: 0.5, lumens: 4000, color: '#facc15', pitch: 0 }]);
+                    setTimeout(() => {
+                      if (sidebarRef.current) {
+                        sidebarRef.current.scrollTo({
+                          top: sidebarRef.current.scrollHeight,
+                          behavior: 'smooth'
+                        });
+                      }
+                    }, 100);
+                  }} className="bg-amber-500 p-1.5 rounded-full hover:bg-amber-400 transition-colors shadow-lg"><Plus size={14} className="text-slate-900" /></button>
                 </div>
-                {lights.map(light => {
+                {lights.map((light, idx) => {
                   const borderClass = light.surface === SurfaceType.CEILING ? "border-t-8 border-yellow-300" :
                                      light.surface === SurfaceType.WALL_EAST ? "border-r-8 border-cyan-400" :
                                      light.surface === SurfaceType.WALL_WEST ? "border-l-8 border-cyan-400" :
@@ -775,32 +894,152 @@ const App: React.FC = () => {
                                      "";
                   return (
                     <div key={light.id} className={`bg-slate-700/40 p-4 rounded-2xl border border-slate-600/50 space-y-4 ${borderClass}`}>
-                      <div className="flex justify-between items-center">
-                        <select value={light.surface} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, surface: e.target.value as SurfaceType } : l))} className="bg-transparent border-none text-[10px] font-black text-slate-200 uppercase outline-none">
-                          {Object.values(SurfaceType).map(s => <option key={s} value={s} className="bg-slate-800 text-white">{t.surfaces[s]}</option>)}
-                        </select>
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => setLights([...lights, { ...light, id: Math.random().toString(36).substr(2, 9), name: `${light.name} (Copy)` }])} className="text-slate-400 hover:text-amber-500 transition-colors"><Copy size={12} /></button>
-                          <button onClick={() => setLights(lights.filter(l => l.id !== light.id))} className="text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-black text-slate-400 tracking-widest">{t.lights} {idx + 1}</span>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setLights([...lights, { ...light, id: Math.random().toString(36).substr(2, 9), name: `${light.name} (Copy)` }])} className="text-slate-400 hover:text-amber-500 transition-colors"><Copy size={12} /></button>
+                            <button onClick={() => setLights(lights.filter(l => l.id !== light.id))} className="text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={12} /></button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {[SurfaceType.CEILING, SurfaceType.SLOPE_WEST, SurfaceType.SLOPE_EAST].map(s => (
+                            <button
+                              key={s}
+                              onClick={() => setLights(lights.map(l => l.id === light.id ? { ...l, surface: s } : l))}
+                              className={`py-1.5 px-1 rounded text-[9px] font-bold transition-all border ${
+                                light.surface === s 
+                                  ? "bg-slate-100 text-slate-900 border-slate-100 shadow-sm" 
+                                  : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-750"
+                              }`}
+                            >
+                              {t.surfaces[s]}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-2 gap-1">
+                          {[SurfaceType.WALL_WEST, SurfaceType.WALL_EAST].map(s => (
+                            <button
+                              key={s}
+                              onClick={() => setLights(lights.map(l => l.id === light.id ? { ...l, surface: s } : l))}
+                              className={`py-1.5 px-1 rounded text-[9px] font-bold transition-all border ${
+                                light.surface === s 
+                                  ? "bg-slate-100 text-slate-900 border-slate-100 shadow-sm" 
+                                  : "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-750"
+                              }`}
+                            >
+                              {t.surfaces[s]}
+                            </button>
+                          ))}
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-4">
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-300 uppercase">{t.uLabel}</label>
-                          <input type="number" step="0.01" min="0" value={light.u} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, u: e.target.value === '' ? '' : Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                          <label className="text-[9px] font-bold text-slate-300">
+                            {light.surface.includes('WALL') ? t.uLabelHeight : t.uLabelWidth}
+                            {inputMode === 'ABS' && <span className="text-amber-500 ml-1">(mm)</span>}
+                          </label>
+                          <input 
+                            type="number" 
+                            step={inputMode === 'ABS' ? "10" : "0.01"} 
+                            value={(() => {
+                              if (inputMode === 'RATIO') return light.u;
+                              const u = Number(light.u) || 0;
+                              const W = Number(room.width) || 0;
+                              const H = Number(room.height) || 0;
+                              const C = Number(room.chamfer) || 0;
+                              if (light.surface === SurfaceType.CEILING) return Math.round((u * (W - 2 * C) + C) * 1000);
+                              if (light.surface.includes('WALL')) return Math.round(u * (H - C) * 1000);
+                              if (light.surface.includes('SLOPE')) return Math.round(u * C * Math.sqrt(2) * 1000);
+                              return 0;
+                            })()} 
+                            onChange={e => {
+                              const val = e.target.value === '' ? '' : Number(e.target.value);
+                              let newU: number | '' = '';
+                              if (val !== '') {
+                                if (inputMode === 'RATIO') {
+                                  newU = Math.max(0, Math.min(1, val));
+                                } else {
+                                  const W = Number(room.width) || 0;
+                                  const H = Number(room.height) || 0;
+                                  const C = Number(room.chamfer) || 0;
+                                  const mm = val / 1000;
+                                  if (light.surface === SurfaceType.CEILING) {
+                                    const range = W - 2 * C;
+                                    newU = range === 0 ? 0 : Math.max(0, Math.min(1, (mm - C) / range));
+                                  } else if (light.surface.includes('WALL')) {
+                                    const range = H - C;
+                                    newU = range === 0 ? 0 : Math.max(0, Math.min(1, mm / range));
+                                  } else if (light.surface.includes('SLOPE')) {
+                                    const range = C * Math.sqrt(2);
+                                    newU = range === 0 ? 0 : Math.max(0, Math.min(1, mm / range));
+                                  }
+                                }
+                              }
+                              setLights(lights.map(l => l.id === light.id ? { ...l, u: newU } : l));
+                            }} 
+                            onClick={e => (e.target as HTMLInputElement).select()} 
+                            className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" 
+                          />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-300 uppercase">{t.vLabel}</label>
-                          <input type="number" step="0.01" min="0" value={light.v} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, v: e.target.value === '' ? '' : Math.max(0, Math.min(1, Number(e.target.value))) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" />
+                          <label className="text-[9px] font-bold text-slate-300">
+                            {t.vLabel}
+                            {inputMode === 'ABS' && <span className="text-amber-500 ml-1">(mm)</span>}
+                          </label>
+                          <input 
+                            type="number" 
+                            step={inputMode === 'ABS' ? "10" : "0.01"} 
+                            value={(() => {
+                              if (inputMode === 'RATIO') return light.v;
+                              const v = Number(light.v) || 0;
+                              const D = Number(room.depth) || 0;
+                              return Math.round(v * D * 1000);
+                            })()} 
+                            onChange={e => {
+                              const val = e.target.value === '' ? '' : Number(e.target.value);
+                              let newV: number | '' = '';
+                              if (val !== '') {
+                                if (inputMode === 'RATIO') {
+                                  newV = Math.max(0, Math.min(1, val));
+                                } else {
+                                  const D = Number(room.depth) || 0;
+                                  newV = D === 0 ? 0 : Math.max(0, Math.min(1, val / 1000 / D));
+                                }
+                              }
+                              setLights(lights.map(l => l.id === light.id ? { ...l, v: newV } : l));
+                            }} 
+                            onClick={e => (e.target as HTMLInputElement).select()} 
+                            className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" 
+                          />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-                        <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.pitch}</label><input type="number" step="0.1" min="0" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
-                        <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold uppercase">{t.lumens}</label><input type="number" step="100" min="0" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                        <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold">{t.pitch}</label><input type="number" step="0.1" min="0" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                        <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold">{t.lumens}</label><input type="number" step="100" min="0" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
                       </div>
                     </div>
                   );
                 })}
+                <button 
+                  onClick={() => {
+                    setLights([...lights, { id: Math.random().toString(36).substr(2, 9), name: `L`, surface: SurfaceType.CEILING, u: 0.5, v: 0.5, lumens: 4000, color: '#facc15', pitch: 0 }]);
+                    setTimeout(() => {
+                      if (sidebarRef.current) {
+                        sidebarRef.current.scrollTo({
+                          top: sidebarRef.current.scrollHeight,
+                          behavior: 'smooth'
+                        });
+                      }
+                    }, 100);
+                  }}
+                  className="w-full py-4 rounded-2xl border-2 border-dashed border-slate-700 text-slate-500 hover:border-amber-500/50 hover:text-amber-500 hover:bg-amber-500/5 transition-all flex flex-col items-center justify-center gap-2 group"
+                >
+                  <div className="p-2 rounded-full bg-slate-800 group-hover:bg-amber-500 group-hover:text-slate-900 transition-colors">
+                    <Plus size={20} />
+                  </div>
+                  <span className="text-[10px] font-black tracking-widest">{t.lights} {t.export === 'エクスポート' ? 'を追加' : 'Add Light'}</span>
+                </button>
               </section>
             </div>
           </aside>
@@ -878,6 +1117,94 @@ const App: React.FC = () => {
               </div>
             )}
           </main>
+        </div>
+      )}
+      {/* Light List Modal */}
+      {showLightListModal && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
+          onClick={() => setShowLightListModal(false)}
+        >
+          <div 
+            className="bg-slate-900 border border-slate-700 rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-500 rounded-xl text-slate-900">
+                  <List size={20} />
+                </div>
+                <h2 className="text-xl font-black tracking-tighter text-white">{t.lightList}</h2>
+              </div>
+              <button 
+                onClick={() => setShowLightListModal(false)}
+                className="p-2 rounded-full hover:bg-slate-800 text-slate-400 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </header>
+            
+            <div className="flex-1 overflow-auto p-6">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="text-[10px] font-black text-slate-500 tracking-widest border-b border-slate-800">
+                    <th className="pb-4 pl-4">{t.no}</th>
+                    <th className="pb-4">{t.surface}</th>
+                    <th className="pb-4">{t.position} (U / V)</th>
+                    <th className="pb-4">{t.pitch} (m)</th>
+                    <th className="pb-4">{t.lumens} (lm)</th>
+                    <th className="pb-4 pr-4 text-right">{t.actions}</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm">
+                  {lights.map((light, idx) => (
+                    <tr key={light.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors group">
+                      <td className="py-4 pl-4 font-mono text-slate-500">{idx + 1}</td>
+                      <td className="py-4">
+                        <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${
+                          light.surface === SurfaceType.CEILING ? "bg-yellow-500/10 text-yellow-500" :
+                          light.surface.includes('WALL') ? "bg-blue-500/10 text-blue-500" :
+                          "bg-emerald-500/10 text-emerald-500"
+                        }`}>
+                          {t.surfaces[light.surface]}
+                        </span>
+                      </td>
+                      <td className="py-4 font-mono text-slate-300">
+                        {typeof light.u === 'number' ? light.u.toFixed(2) : '-'} / {typeof light.v === 'number' ? light.v.toFixed(2) : '-'}
+                      </td>
+                      <td className="py-4 font-mono text-slate-300">{light.pitch || '0'}</td>
+                      <td className="py-4 font-mono text-amber-500 font-bold">{light.lumens}</td>
+                      <td className="py-4 pr-4 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => setLights([...lights, { ...light, id: Math.random().toString(36).substr(2, 9), name: `${light.name} (Copy)` }])}
+                            className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-500 transition-all"
+                          >
+                            <Copy size={14} />
+                          </button>
+                          <button 
+                            onClick={() => setLights(lights.filter(l => l.id !== light.id))}
+                            className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-500 transition-all"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <footer className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end">
+              <button 
+                onClick={() => setShowLightListModal(false)}
+                className="px-6 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-slate-700 transition-all"
+              >
+                {t.close}
+              </button>
+            </footer>
+          </div>
         </div>
       )}
     </div>
