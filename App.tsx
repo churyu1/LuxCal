@@ -76,10 +76,10 @@ const translations = {
     clearance: "床面クリアランス (m)",
     lights: "照明",
     pts: "箇所",
-    uLabelWidth: "U (幅方向 0-1)",
-    uLabelHeight: "U (高さ方向 0-1)",
-    vLabel: "V (奥行方向 0-1)",
-    pitch: "ピッチ (m)",
+    uLabelWidth: "U (幅方向 %)",
+    uLabelHeight: "U (高さ方向 %)",
+    vLabel: "V (奥行方向 %)",
+    pitch: "ピッチ (mm)",
     lumens: "全光束 (lm)",
     analysis: "解析",
     realtimeVis: "リアルタイム可視化",
@@ -127,7 +127,7 @@ const translations = {
     position: "位置",
     actions: "操作",
     close: "閉じる",
-    ratioMode: "比率 (0-1)",
+    ratioMode: "比率 (%)",
     absMode: "実数値 (mm)",
     surfaces: {
       [SurfaceType.CEILING]: "天井",
@@ -160,10 +160,10 @@ const translations = {
     clearance: "Clearance (m)",
     lights: "Lights",
     pts: "Pts",
-    uLabelWidth: "U (Width 0-1)",
-    uLabelHeight: "U (Height 0-1)",
-    vLabel: "V (Depth 0-1)",
-    pitch: "Pitch (m)",
+    uLabelWidth: "U (Width %)",
+    uLabelHeight: "U (Height %)",
+    vLabel: "V (Depth %)",
+    pitch: "Pitch (mm)",
     lumens: "Lumens (lm)",
     analysis: "Analysis",
     realtimeVis: "Real-time Visualization",
@@ -211,7 +211,7 @@ const translations = {
     position: "Position",
     actions: "Actions",
     close: "Close",
-    ratioMode: "Ratio (0-1)",
+    ratioMode: "Ratio (%)",
     absMode: "Actual (mm)",
     surfaces: {
       [SurfaceType.CEILING]: "Ceiling",
@@ -366,6 +366,7 @@ const App: React.FC = () => {
   const [activeProjectId, setActiveProjectId] = useState<string>('proj-1');
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [draggedLightIndex, setDraggedLightIndex] = useState<number | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const planSvgRef = useRef<SVGSVGElement>(null);
@@ -445,6 +446,27 @@ const App: React.FC = () => {
 
   const onDragEnd = () => {
     setDraggedIndex(null);
+  };
+
+  const onLightDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedLightIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onLightDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedLightIndex === null || draggedLightIndex === index) return;
+    
+    const newLights = [...lights];
+    const item = newLights.splice(draggedLightIndex, 1)[0];
+    newLights.splice(index, 0, item);
+    
+    setDraggedLightIndex(index);
+    setLights(newLights);
+  };
+
+  const onLightDragEnd = () => {
+    setDraggedLightIndex(null);
   };
 
   const getLightNormal = (surface: SurfaceType) => {
@@ -941,14 +963,14 @@ const App: React.FC = () => {
                           </label>
                           <input 
                             type="number" 
-                            step={inputMode === 'ABS' ? "10" : "0.01"} 
+                            step={inputMode === 'ABS' ? "10" : "1"} 
                             value={(() => {
-                              if (inputMode === 'RATIO') return light.u;
+                              if (inputMode === 'RATIO') return Math.round((Number(light.u) || 0) * 100);
                               const u = Number(light.u) || 0;
                               const W = Number(room.width) || 0;
                               const H = Number(room.height) || 0;
                               const C = Number(room.chamfer) || 0;
-                              if (light.surface === SurfaceType.CEILING) return Math.round((u * (W - 2 * C) + C) * 1000);
+                              if (light.surface === SurfaceType.CEILING) return Math.round(u * (W - 2 * C) * 1000);
                               if (light.surface.includes('WALL')) return Math.round(u * (H - C) * 1000);
                               if (light.surface.includes('SLOPE')) return Math.round(u * C * Math.sqrt(2) * 1000);
                               return 0;
@@ -958,7 +980,7 @@ const App: React.FC = () => {
                               let newU: number | '' = '';
                               if (val !== '') {
                                 if (inputMode === 'RATIO') {
-                                  newU = Math.max(0, Math.min(1, val));
+                                  newU = Math.max(0, Math.min(100, val)) / 100;
                                 } else {
                                   const W = Number(room.width) || 0;
                                   const H = Number(room.height) || 0;
@@ -966,7 +988,7 @@ const App: React.FC = () => {
                                   const mm = val / 1000;
                                   if (light.surface === SurfaceType.CEILING) {
                                     const range = W - 2 * C;
-                                    newU = range === 0 ? 0 : Math.max(0, Math.min(1, (mm - C) / range));
+                                    newU = range === 0 ? 0 : Math.max(0, Math.min(1, mm / range));
                                   } else if (light.surface.includes('WALL')) {
                                     const range = H - C;
                                     newU = range === 0 ? 0 : Math.max(0, Math.min(1, mm / range));
@@ -989,9 +1011,9 @@ const App: React.FC = () => {
                           </label>
                           <input 
                             type="number" 
-                            step={inputMode === 'ABS' ? "10" : "0.01"} 
+                            step={inputMode === 'ABS' ? "10" : "1"} 
                             value={(() => {
-                              if (inputMode === 'RATIO') return light.v;
+                              if (inputMode === 'RATIO') return Math.round((Number(light.v) || 0) * 100);
                               const v = Number(light.v) || 0;
                               const D = Number(room.depth) || 0;
                               return Math.round(v * D * 1000);
@@ -1001,7 +1023,7 @@ const App: React.FC = () => {
                               let newV: number | '' = '';
                               if (val !== '') {
                                 if (inputMode === 'RATIO') {
-                                  newV = Math.max(0, Math.min(1, val));
+                                  newV = Math.max(0, Math.min(100, val)) / 100;
                                 } else {
                                   const D = Number(room.depth) || 0;
                                   newV = D === 0 ? 0 : Math.max(0, Math.min(1, val / 1000 / D));
@@ -1015,7 +1037,21 @@ const App: React.FC = () => {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-4">
-                        <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold">{t.pitch}</label><input type="number" step="0.1" min="0" value={light.pitch} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, pitch: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-300 font-bold">{t.pitch}</label>
+                          <input 
+                            type="number" 
+                            step="10" 
+                            min="0" 
+                            value={Math.round((Number(light.pitch) || 0) * 1000)} 
+                            onChange={e => {
+                              const val = e.target.value === '' ? '' : Number(e.target.value);
+                              setLights(lights.map(l => l.id === light.id ? { ...l, pitch: val === '' ? 0 : val / 1000 } : l));
+                            }} 
+                            onClick={e => (e.target as HTMLInputElement).select()} 
+                            className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" 
+                          />
+                        </div>
                         <div className="space-y-1"><label className="text-[9px] text-slate-300 font-bold">{t.lumens}</label><input type="number" step="100" min="0" value={light.lumens} onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: e.target.value === '' ? '' : Number(e.target.value) } : l))} onClick={e => (e.target as HTMLInputElement).select()} className="w-full bg-slate-800 border border-slate-600 rounded-lg p-2.5 text-sm text-white outline-none" /></div>
                       </div>
                     </div>
@@ -1044,7 +1080,7 @@ const App: React.FC = () => {
             </div>
           </aside>
           <main className="flex-1 flex flex-col p-4 relative bg-slate-900 overflow-hidden">
-            <header className="flex flex-wrap justify-between items-end mb-6 px-4 gap-6">
+            <header className="flex flex-wrap justify-between items-center mb-6 px-4 gap-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-amber-500 rounded-2xl shadow-lg"><Split size={20} className="text-slate-900" /></div>
                 <div>
@@ -1052,38 +1088,39 @@ const App: React.FC = () => {
                   <p className="text-[10px] text-slate-300 uppercase font-black tracking-widest">{t.realtimeVis}</p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-4 items-center">
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="bg-slate-800/40 px-5 py-3 rounded-2xl border border-slate-700/60 flex flex-col items-center justify-center min-w-[100px] shadow-sm">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Zap size={12} className="text-amber-500 fill-amber-500" />
+                    <span className="text-[9px] uppercase text-slate-400 font-black tracking-wider">{t.totalLights}</span>
+                  </div>
+                  <span className="text-xl font-mono font-black text-amber-500 tracking-tight">{totalLightPoints}</span>
+                </div>
+
                 {calcMode === 'BODY' && (
                   <>
-                    <div className="bg-slate-800/40 px-6 py-4 rounded-[1.25rem] border border-slate-700/60 flex flex-col items-center justify-center min-w-[140px] shadow-sm">
-                      <span className="text-[10px] uppercase text-slate-400 font-black tracking-wider mb-2">{t.topLabel}</span>
+                    <div className="bg-slate-800/40 px-5 py-3 rounded-2xl border border-slate-700/60 flex flex-col items-center justify-center min-w-[120px] shadow-sm">
+                      <span className="text-[9px] uppercase text-slate-400 font-black tracking-wider mb-1">{t.topLabel}</span>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-mono text-blue-400 font-black tracking-tight">{stats.top.toFixed(0)}</span>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase">lx</span>
+                        <span className="text-xl font-mono text-blue-400 font-black tracking-tight">{stats.top.toFixed(0)}</span>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">lx</span>
                       </div>
                     </div>
-                    <div className="bg-slate-800/40 px-6 py-4 rounded-[1.25rem] border border-slate-700/60 flex flex-col items-center justify-center min-w-[140px] shadow-sm">
-                      <span className="text-[10px] uppercase text-slate-400 font-black tracking-wider mb-2">{t.sideLabel}</span>
+                    <div className="bg-slate-800/40 px-5 py-3 rounded-2xl border border-slate-700/60 flex flex-col items-center justify-center min-w-[120px] shadow-sm">
+                      <span className="text-[9px] uppercase text-slate-400 font-black tracking-wider mb-1">{t.sideLabel}</span>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-mono text-blue-400 font-black tracking-tight">{stats.side.toFixed(0)}</span>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase">lx</span>
+                        <span className="text-xl font-mono text-blue-400 font-black tracking-tight">{stats.side.toFixed(0)}</span>
+                        <span className="text-[9px] text-slate-500 font-bold uppercase">lx</span>
                       </div>
                     </div>
-                    <div className="h-12 w-px bg-slate-800 mx-2 self-center" />
                   </>
                 )}
-                <div className="bg-slate-800/60 px-6 py-4 rounded-[1.25rem] border border-slate-700/80 flex flex-col items-center justify-center min-w-[120px] shadow-md">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Zap size={14} className="text-amber-500 fill-amber-500" />
-                    <span className="text-[10px] uppercase text-slate-400 font-black tracking-wider">{t.totalLights}</span>
-                  </div>
-                  <span className="text-2xl font-mono font-black text-amber-500 tracking-tight">{totalLightPoints}</span>
-                </div>
-                <div className="bg-slate-800 px-8 py-5 rounded-[1.5rem] border border-slate-600 flex flex-col items-center justify-center min-w-[240px] shadow-2xl ring-1 ring-slate-700/50">
-                  <span className="text-[11px] uppercase text-slate-300 font-black tracking-widest mb-3">{t.avgLabel} {calcMode === 'FLOOR' ? t.workPlane : t.bodySurface}</span>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-mono text-amber-500 font-black tracking-tighter drop-shadow-[0_0_15px_rgba(245,158,11,0.2)]">{stats.main.toFixed(0)}</span>
-                    <span className="text-xs font-bold text-slate-500 uppercase">lx</span>
+
+                <div className="bg-slate-800/80 px-6 py-3 rounded-2xl border border-amber-500/30 flex flex-col items-center justify-center min-w-[160px] shadow-lg ring-1 ring-amber-500/10">
+                  <span className="text-[9px] uppercase text-amber-500/80 font-black tracking-widest mb-1">{t.avgLabel} {calcMode === 'FLOOR' ? t.workPlane : t.bodySurface}</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-mono text-amber-500 font-black tracking-tighter">{stats.main.toFixed(0)}</span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">lx</span>
                   </div>
                 </div>
               </div>
@@ -1135,6 +1172,20 @@ const App: React.FC = () => {
                   <List size={20} />
                 </div>
                 <h2 className="text-xl font-black tracking-tighter text-white">{t.lightList}</h2>
+                <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700 ml-4">
+                  <button 
+                    onClick={() => setInputMode('RATIO')} 
+                    className={`px-3 py-1 rounded-lg text-[10px] font-black transition-all ${inputMode === 'RATIO' ? 'bg-amber-500 text-slate-900 shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                  >
+                    %
+                  </button>
+                  <button 
+                    onClick={() => setInputMode('ABS')} 
+                    className={`px-3 py-1 rounded-lg text-[10px] font-black transition-all ${inputMode === 'ABS' ? 'bg-amber-500 text-slate-900 shadow-lg' : 'text-slate-400 hover:text-slate-200'}`}
+                  >
+                    mm
+                  </button>
+                </div>
               </div>
               <button 
                 onClick={() => setShowLightListModal(false)}
@@ -1148,18 +1199,31 @@ const App: React.FC = () => {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-[10px] font-black text-slate-500 tracking-widest border-b border-slate-800">
-                    <th className="pb-4 pl-4">{t.no}</th>
+                    <th className="pb-4 pl-4 w-10"></th>
+                    <th className="pb-4">{t.no}</th>
                     <th className="pb-4">{t.surface}</th>
-                    <th className="pb-4">{t.position} (U / V)</th>
-                    <th className="pb-4">{t.pitch} (m)</th>
-                    <th className="pb-4">{t.lumens} (lm)</th>
+                    <th className="pb-4">{t.position} ({inputMode === 'ABS' ? 'mm' : '%'})</th>
+                    <th className="pb-4">{t.pitch}</th>
+                    <th className="pb-4">{t.lumens}</th>
                     <th className="pb-4 pr-4 text-right">{t.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
                   {lights.map((light, idx) => (
-                    <tr key={light.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors group">
-                      <td className="py-4 pl-4 font-mono text-slate-500">{idx + 1}</td>
+                    <tr 
+                      key={light.id} 
+                      draggable
+                      onDragStart={(e) => onLightDragStart(e, idx)}
+                      onDragOver={(e) => onLightDragOver(e, idx)}
+                      onDragEnd={onLightDragEnd}
+                      className={`border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors group ${draggedLightIndex === idx ? 'opacity-40 bg-slate-800' : ''}`}
+                    >
+                      <td className="py-4 pl-4">
+                        <div className="cursor-grab active:cursor-grabbing text-slate-600 hover:text-slate-400 transition-colors">
+                          <GripVertical size={16} />
+                        </div>
+                      </td>
+                      <td className="py-4 font-mono text-slate-500">{idx + 1}</td>
                       <td className="py-4">
                         <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${
                           light.surface === SurfaceType.CEILING ? "bg-yellow-500/10 text-yellow-500" :
@@ -1169,11 +1233,103 @@ const App: React.FC = () => {
                           {t.surfaces[light.surface]}
                         </span>
                       </td>
-                      <td className="py-4 font-mono text-slate-300">
-                        {typeof light.u === 'number' ? light.u.toFixed(2) : '-'} / {typeof light.v === 'number' ? light.v.toFixed(2) : '-'}
+                      <td className="py-4">
+                        <div className="flex items-center gap-2">
+                          <input 
+                            type="number" 
+                            step={inputMode === 'ABS' ? "10" : "1"} 
+                            value={(() => {
+                              if (inputMode === 'RATIO') return Math.round((Number(light.u) || 0) * 100);
+                              const u = Number(light.u) || 0;
+                              const W = Number(room.width) || 0;
+                              const H = Number(room.height) || 0;
+                              const C = Number(room.chamfer) || 0;
+                              if (light.surface === SurfaceType.CEILING) return Math.round(u * (W - 2 * C) * 1000);
+                              if (light.surface.includes('WALL')) return Math.round(u * (H - C) * 1000);
+                              if (light.surface.includes('SLOPE')) return Math.round(u * C * Math.sqrt(2) * 1000);
+                              return 0;
+                            })()} 
+                            onChange={e => {
+                              const val = e.target.value === '' ? '' : Number(e.target.value);
+                              let newU: number | '' = '';
+                              if (val !== '') {
+                                if (inputMode === 'RATIO') {
+                                  newU = Math.max(0, Math.min(100, val)) / 100;
+                                } else {
+                                  const W = Number(room.width) || 0;
+                                  const H = Number(room.height) || 0;
+                                  const C = Number(room.chamfer) || 0;
+                                  const mm = val / 1000;
+                                  if (light.surface === SurfaceType.CEILING) {
+                                    const range = W - 2 * C;
+                                    newU = range === 0 ? 0 : Math.max(0, Math.min(1, mm / range));
+                                  } else if (light.surface.includes('WALL')) {
+                                    const range = H - C;
+                                    newU = range === 0 ? 0 : Math.max(0, Math.min(1, mm / range));
+                                  } else if (light.surface.includes('SLOPE')) {
+                                    const range = C * Math.sqrt(2);
+                                    newU = range === 0 ? 0 : Math.max(0, Math.min(1, mm / range));
+                                  }
+                                }
+                              }
+                              setLights(lights.map(l => l.id === light.id ? { ...l, u: newU } : l));
+                            }} 
+                            onClick={e => (e.target as HTMLInputElement).select()} 
+                            className="w-20 bg-slate-800 border border-slate-600 rounded p-1.5 text-xs text-white outline-none font-mono" 
+                          />
+                          <span className="text-slate-500">/</span>
+                          <input 
+                            type="number" 
+                            step={inputMode === 'ABS' ? "10" : "1"} 
+                            value={(() => {
+                              if (inputMode === 'RATIO') return Math.round((Number(light.v) || 0) * 100);
+                              const v = Number(light.v) || 0;
+                              const D = Number(room.depth) || 0;
+                              return Math.round(v * D * 1000);
+                            })()} 
+                            onChange={e => {
+                              const val = e.target.value === '' ? '' : Number(e.target.value);
+                              let newV: number | '' = '';
+                              if (val !== '') {
+                                if (inputMode === 'RATIO') {
+                                  newV = Math.max(0, Math.min(100, val)) / 100;
+                                } else {
+                                  const D = Number(room.depth) || 0;
+                                  newV = D === 0 ? 0 : Math.max(0, Math.min(1, val / 1000 / D));
+                                }
+                              }
+                              setLights(lights.map(l => l.id === light.id ? { ...l, v: newV } : l));
+                            }} 
+                            onClick={e => (e.target as HTMLInputElement).select()} 
+                            className="w-20 bg-slate-800 border border-slate-600 rounded p-1.5 text-xs text-white outline-none font-mono" 
+                          />
+                        </div>
                       </td>
-                      <td className="py-4 font-mono text-slate-300">{light.pitch || '0'}</td>
-                      <td className="py-4 font-mono text-amber-500 font-bold">{light.lumens}</td>
+                      <td className="py-4">
+                        <input 
+                          type="number" 
+                          step="10" 
+                          min="0" 
+                          value={Math.round((Number(light.pitch) || 0) * 1000)} 
+                          onChange={e => {
+                            const val = e.target.value === '' ? '' : Number(e.target.value);
+                            setLights(lights.map(l => l.id === light.id ? { ...l, pitch: val === '' ? 0 : val / 1000 } : l));
+                          }} 
+                          onClick={e => (e.target as HTMLInputElement).select()} 
+                          className="w-20 bg-slate-800 border border-slate-600 rounded p-1.5 text-xs text-white outline-none font-mono" 
+                        />
+                      </td>
+                      <td className="py-4">
+                        <input 
+                          type="number" 
+                          step="100" 
+                          min="0" 
+                          value={light.lumens} 
+                          onChange={e => setLights(lights.map(l => l.id === light.id ? { ...l, lumens: e.target.value === '' ? '' : Number(e.target.value) } : l))} 
+                          onClick={e => (e.target as HTMLInputElement).select()} 
+                          className="w-24 bg-slate-800 border border-slate-600 rounded p-1.5 text-xs text-amber-500 font-bold outline-none font-mono" 
+                        />
+                      </td>
                       <td className="py-4 pr-4 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
